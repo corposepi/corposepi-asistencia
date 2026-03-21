@@ -20,12 +20,12 @@
 html,body{height:100%;font-family:'Montserrat',sans-serif;background:var(--dark);color:var(--text);}
 
 /* LOGIN */
-#login{position:fixed;inset:0;background:var(--dark);display:flex;align-items:center;justify-content:center;z-index:999;padding:1rem;overflow-y:auto;}
-.login-box{background:var(--dark2);border:1px solid var(--dark3);border-radius:20px;padding:2rem;max-width:400px;width:100%;}
+
+
 .lb-head{text-align:center;margin-bottom:1.5rem;}
-.lb-icon{font-size:2.5rem;margin-bottom:.5rem;}
-.lb-title{font-size:1.2rem;font-weight:800;color:#fff;}
-.lb-sub{font-size:.68rem;color:var(--muted);margin-top:.2rem;}
+
+
+
 
 /* Role selector */
 .role-tabs{display:flex;background:var(--dark3);border-radius:12px;padding:3px;margin-bottom:1.25rem;gap:2px;}
@@ -35,14 +35,14 @@ html,body{height:100%;font-family:'Montserrat',sans-serif;background:var(--dark)
 
 .lb-form{background:var(--dark3);border-radius:14px;padding:1.25rem;}
 .lb-label{font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--corp3);margin-bottom:.5rem;display:block;}
-.lb-input{width:100%;background:var(--dark4);border:1px solid #333;border-radius:10px;padding:.7rem 1rem;color:var(--text);font-family:'Montserrat',sans-serif;font-size:.875rem;outline:none;margin-bottom:.65rem;transition:border .2s;}
-.lb-input:focus{border-color:var(--corp);}
-.lb-input::placeholder{color:#444;}
-.lb-select{width:100%;background:var(--dark4);border:1px solid #333;border-radius:10px;padding:.7rem 1rem;color:var(--text);font-family:'Montserrat',sans-serif;font-size:.875rem;outline:none;margin-bottom:.65rem;cursor:pointer;}
-.lb-btn{width:100%;border:none;border-radius:10px;padding:.85rem;color:#fff;font-family:'Montserrat',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;}
+
+
+
+
+
 .lb-btn-doc{background:linear-gradient(135deg,#92400e,var(--gold));}
 .lb-btn-adm{background:linear-gradient(135deg,#991b1b,#ef4444);}
-.lb-err{background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);border-radius:8px;padding:.5rem;font-size:.75rem;color:var(--red);margin-bottom:.65rem;display:none;}
+
 .lb-err.show{display:block;}
 .lb-note{font-size:.65rem;color:var(--muted);text-align:center;margin-top:.75rem;line-height:1.7;}
 
@@ -173,6 +173,80 @@ tr:hover td{background:rgba(255,255,255,.02);}
 
 @media(max-width:420px){.stats-row{grid-template-columns:1fr 1fr;}.rf-grid{grid-template-columns:1fr;}.cc-grid{grid-template-columns:1fr;}}
 @media print{#app .topbar,.tabs,.docente-banner{display:none!important;}.qr-print{border:2px solid #000;}}
+
+.lb-err.show{display:block;}
+
+
+/* ══ LOGIN ELEGANTE V2 ══ */
+#login{
+  position:fixed;inset:0;
+  background:linear-gradient(135deg,#0a0a0a 0%,#111827 50%,#0a0a0a 100%);
+  display:flex;align-items:center;justify-content:center;
+  z-index:999;padding:1rem;overflow:hidden;
+}
+#login::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse 70% 50% at 50% 0%,rgba(184,65,10,0.15) 0%,transparent 70%),
+             radial-gradient(ellipse 50% 40% at 90% 100%,rgba(212,168,67,0.08) 0%,transparent 60%);
+  pointer-events:none;
+}
+.login-box{
+  position:relative;z-index:1;
+  background:rgba(255,255,255,0.03);
+  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+  border:1px solid rgba(255,255,255,0.07);
+  border-radius:28px;
+  padding:2.5rem 2rem 2rem;
+  max-width:390px;width:100%;
+  text-align:center;
+  box-shadow:0 0 0 1px rgba(184,65,10,0.12),0 24px 64px rgba(0,0,0,0.6),inset 0 1px 0 rgba(255,255,255,0.05);
+}
+.login-logo{
+  width:110px;height:110px;
+  margin:0 auto 1rem;
+  display:flex;align-items:center;justify-content:center;
+}
+.login-logo img{
+  width:100%;height:100%;
+  object-fit:contain;
+  filter:drop-shadow(0 4px 16px rgba(184,65,10,0.3));
+}
+.lb-icon{font-size:0;margin:0;}
+.lb-title{font-size:1.3rem;font-weight:800;color:#fff;margin-bottom:.25rem;letter-spacing:-.01em;}
+.lb-sub{font-size:.65rem;color:rgba(255,255,255,0.3);margin-bottom:1.75rem;letter-spacing:.08em;text-transform:uppercase;}
+.lb-input,.lb-select{
+  width:100%;box-sizing:border-box;
+  background:rgba(255,255,255,0.05);
+  border:1px solid rgba(255,255,255,0.09);
+  border-radius:13px;
+  padding:.78rem 1rem;
+  color:#fff;
+  font-family:'Montserrat',sans-serif;font-size:.875rem;
+  outline:none;margin-bottom:.65rem;
+  transition:border .2s,background .2s;
+}
+.lb-input:focus,.lb-select:focus{border-color:rgba(184,65,10,0.55);background:rgba(184,65,10,0.05);}
+.lb-input::placeholder{color:rgba(255,255,255,0.18);}
+.lb-select option{background:#1a1a1a;color:#fff;}
+.lb-btn{
+  width:100%;
+  background:linear-gradient(135deg,#B8410A,#E8651A);
+  border:none;border-radius:13px;
+  padding:.9rem;color:#fff;
+  font-family:'Montserrat',sans-serif;font-size:.9rem;font-weight:700;
+  cursor:pointer;letter-spacing:.02em;
+  box-shadow:0 6px 24px rgba(184,65,10,0.4);
+  transition:opacity .2s,transform .1s;
+}
+.lb-btn:hover{opacity:.88;}
+.lb-btn:active{transform:scale(.98);}
+.lb-err{
+  background:rgba(248,113,113,.07);border:1px solid rgba(248,113,113,.2);
+  border-radius:10px;padding:.55rem;font-size:.72rem;color:#f87171;
+  margin-bottom:.65rem;display:none;
+}
+.lb-err.show{display:block;}
+
 </style>
 </head>
 <body>
@@ -181,9 +255,11 @@ tr:hover td{background:rgba(255,255,255,.02);}
 <div id="login">
   <div class="login-box">
     <div class="lb-head">
-      <div class="lb-icon">📋</div>
-      <div class="lb-title">Control de Asistencia</div>
-      <div class="lb-sub">CORPOSEPI · Módulo 2</div>
+      
+    <div class="login-logo"><img src="https://corposepi.github.io/corposepi-aprende/logo.png" alt="CORPOSEPI"/></div>
+    <div class="lb-icon">📋</div>
+    <div class="lb-title">Control de Asistencia</div>
+    <div class="lb-sub">CORPOSEPI · Sistema docente</div>
     </div>
     <div class="role-tabs">
       <div class="rt active-doc" onclick="switchLoginRole('docente',this)">👩‍🏫 Docente / Personal</div>
@@ -205,16 +281,16 @@ tr:hover td{background:rgba(255,255,255,.02);}
           <option>Personal de Apoyo</option>
         </select>
         <div class="lb-err" id="err-docente">Contraseña incorrecta.</div>
-        <input class="lb-input" id="doc-pass" type="password" placeholder="Contraseña: Docente2025" onkeydown="if(event.key==='Enter')loginDocente()"/>
+        <input class="lb-input" id="doc-pass" type="password" placeholder="Contraseña" onkeydown="if(event.key==='Enter')loginDocente()"/>
         <button class="lb-btn lb-btn-doc" onclick="loginDocente()">Registrar ingreso y entrar</button>
-        <div class="lb-note">Contraseña: <strong>Docente2025</strong></div>
+        <div class="lb-note"></div>
       </div>
       <!-- ADMIN -->
       <div id="lf-admin" style="display:none;">
         <div class="lb-err" id="err-admin">Contraseña incorrecta.</div>
         <input class="lb-input" id="adm-pass" type="password" placeholder="Contraseña admin" onkeydown="if(event.key==='Enter')loginAdmin()"/>
         <button class="lb-btn lb-btn-adm" onclick="loginAdmin()">Ingresar como Admin</button>
-        <div class="lb-note">Contraseñas: <strong>CorpAdmin2025</strong> · <strong>BancoFenix2025</strong></div>
+        <div class="lb-note"> · <strong></strong></div>
       </div>
     </div>
   </div>
@@ -224,7 +300,7 @@ tr:hover td{background:rgba(255,255,255,.02);}
 <div id="app">
   <div class="topbar">
     <div class="tb-info">
-      <div class="tb-title">📋 Asistencia CORPOSEPI</div>
+      <div class="tb-title" style="display:flex;align-items:center;gap:.5rem;"> Asistencia CORPOSEPI</div>
       <div class="tb-sub" id="tb-sub">Módulo 2 · corposepi.org</div>
     </div>
     <div class="tb-right">
@@ -429,8 +505,8 @@ const FB_CONFIG = {
 };
 const BASE_CARNETS = 'https://beamish-squirrel-43c7b7.netlify.app';
 const BASE_APP = window.location.origin + window.location.pathname.replace('index.html','');
-const PASS_DOCENTE = ['Docente2025','Personal2025'];
-const PASS_ADMIN = ['CorpAdmin2025','BancoFenix2025'];
+const PASS_DOCENTE = ['DocentesCorposepi@#@2026','DocentesCorposepi@#@2026'];
+const PASS_ADMIN = ['Deperavi1973@#@2026','Deperavi1973@#@2026'];
 
 let db = null;
 let userNombre = '';
