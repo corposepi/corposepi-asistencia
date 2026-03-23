@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no"/>
+<title>CORPOSEPI — Registrar Asistencia</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<style>
+:root{
+  --corp:#B8410A;--corp2:#E8651A;--gold:#D4A843;
+  --dark:#0C0B09;--dark2:#141210;--dark3:#1E1B17;
+  --text:#F5F0E8;--muted:#8A7F72;--green:#4ade80;--amber:#fbbf24;--red:#f87171;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{min-height:100vh;font-family:'Montserrat',sans-serif;
+  background:radial-gradient(ellipse at 60% 20%,rgba(184,65,10,.2) 0%,transparent 65%),var(--dark);
+  color:var(--text);display:flex;align-items:center;justify-content:center;padding:1rem;}
+
+.card{width:100%;max-width:400px;background:rgba(255,255,255,.04);backdrop-filter:blur(24px);
+  border:1px solid rgba(255,255,255,.08);border-radius:24px;padding:2rem 1.75rem;
+  box-shadow:0 20px 60px rgba(0,0,0,.4);}
+
+/* Header */
+.logo-wrap{display:flex;flex-direction:column;align-items:center;gap:.35rem;margin-bottom:1.25rem;}
+.logo-wrap img{height:64px;filter:drop-shadow(0 4px 16px rgba(184,65,10,.45));}
+.logo-name{font-size:1.05rem;font-weight:800;letter-spacing:.08em;}
+.logo-sub{font-size:.6rem;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;}
+
+/* Lugar badge */
+.lugar-badge{background:rgba(184,65,10,.12);border:1px solid rgba(184,65,10,.25);
+  border-radius:12px;padding:.65rem 1rem;margin-bottom:1.25rem;text-align:center;}
+.lugar-icon{font-size:1.1rem;margin-bottom:.2rem;}
+.lugar-nombre{font-size:.88rem;font-weight:700;color:var(--corp2);}
+.lugar-fecha{font-size:.62rem;color:var(--muted);margin-top:.15rem;}
+
+/* Form */
+.form{display:flex;flex-direction:column;gap:.65rem;}
+.inp{width:100%;background:var(--dark3);border:1px solid rgba(255,255,255,.08);
+  border-radius:12px;padding:.7rem 1rem;color:var(--text);
+  font-family:'Montserrat',sans-serif;font-size:.85rem;outline:none;
+  transition:border .2s;text-transform:uppercase;letter-spacing:.02em;}
+.inp::placeholder{text-transform:none;letter-spacing:0;color:var(--muted);}
+.inp:focus{border-color:var(--corp);}
+.inp.doc{text-transform:none;}
+.btn{width:100%;background:linear-gradient(135deg,var(--corp),var(--corp2));
+  border:none;border-radius:12px;padding:.8rem;color:#fff;
+  font-family:'Montserrat',sans-serif;font-size:.9rem;font-weight:800;
+  cursor:pointer;box-shadow:0 6px 20px rgba(184,65,10,.35);
+  transition:transform .15s,box-shadow .15s;}
+.btn:active{transform:scale(.97);}
+.btn:disabled{opacity:.5;cursor:not-allowed;}
+.note{font-size:.62rem;color:var(--muted);text-align:center;line-height:1.6;}
+.err{color:var(--red);font-size:.72rem;text-align:center;display:none;
+  background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2);
+  border-radius:10px;padding:.5rem;}
+.err.show{display:block;}
+
+/* GPS bar */
+.gps-bar{display:flex;align-items:center;gap:.5rem;
+  background:var(--dark3);border:1px solid rgba(255,255,255,.06);
+  border-radius:10px;padding:.55rem .85rem;font-size:.65rem;color:var(--muted);}
+.gps-dot{width:7px;height:7px;border-radius:50%;background:var(--muted);flex-shrink:0;}
+.gps-dot.ok{background:var(--green);animation:pulse 2s infinite;}
+.gps-dot.err{background:var(--red);}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* Resultado */
+#result{display:none;text-align:center;}
+.res-icon{font-size:3rem;margin-bottom:.75rem;}
+.res-title{font-size:1.1rem;font-weight:800;margin-bottom:.5rem;}
+.res-rows{background:var(--dark3);border-radius:14px;padding:1rem;
+  text-align:left;margin:.85rem 0;display:flex;flex-direction:column;gap:.45rem;}
+.res-row{display:flex;justify-content:space-between;font-size:.75rem;
+  border-bottom:1px solid rgba(255,255,255,.05);padding-bottom:.35rem;}
+.res-row:last-child{border:none;padding:0;}
+.rl{color:var(--muted);}
+.rv{font-weight:700;}
+.rv.ok{color:var(--green);}
+.rv.warn{color:var(--amber);}
+.rv.bad{color:var(--red);}
+.res-note{font-size:.65rem;color:var(--muted);line-height:1.65;}
+.wa-sent{background:rgba(37,211,102,.1);border:1px solid rgba(37,211,102,.2);
+  border-radius:10px;padding:.5rem .85rem;font-size:.7rem;
+  color:#25D366;margin-top:.5rem;font-weight:600;}
+
+/* Loader */
+#loader{display:none;text-align:center;padding:1.5rem;}
+.spinner{width:36px;height:36px;border:3px solid rgba(255,255,255,.1);
+  border-top-color:var(--corp2);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto .75rem;}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="card">
+
+  <!-- Header -->
+  <div class="logo-wrap">
+    <img src="https://corposepi.github.io/corposepi-aprende/logo.png" alt="CORPOSEPI"/>
+    <div class="logo-name">CORPOSEPI</div>
+    <div class="logo-sub">Registro de Asistencia</div>
+  </div>
+
+  <!-- Lugar -->
+  <div class="lugar-badge">
+    <div class="lugar-icon">📍</div>
+    <div class="lugar-nombre" id="lugar-nombre">Cargando...</div>
+    <div class="lugar-fecha" id="lugar-fecha">—</div>
+  </div>
+
+  <!-- GPS -->
+  <div class="gps-bar" style="margin-bottom:.85rem">
+    <div class="gps-dot" id="gps-dot"></div>
+    <span id="gps-txt">Obteniendo ubicación GPS...</span>
+  </div>
+
+  <!-- Formulario -->
+  <div id="form-wrap">
+    <div class="form">
+      <div class="err" id="err-msg">ID o documento incorrecto.</div>
+      <input class="inp" id="inp-id" placeholder="Tu ID CORPOSEPI (ej: CORP-2025-0001)"
+             autocomplete="off" autocorrect="off" spellcheck="false"
+             onkeydown="if(event.key==='Enter')document.getElementById('inp-doc').focus()"/>
+      <input class="inp doc" id="inp-doc" placeholder="Número de documento"
+             autocomplete="off" inputmode="numeric"
+             onkeydown="if(event.key==='Enter')registrar()"/>
+      <button class="btn" id="btn-reg" onclick="registrar()">✅ Registrar mi asistencia</button>
+      <div class="note">📞 Ayuda: 3208331239 · corposepi.org</div>
+    </div>
+  </div>
+
+  <!-- Loader -->
+  <div id="loader">
+    <div class="spinner"></div>
+    <div style="font-size:.8rem;color:var(--muted)">Registrando asistencia...</div>
+  </div>
+
+  <!-- Resultado -->
+  <div id="result">
+    <div class="res-icon" id="res-icon">✅</div>
+    <div class="res-title" id="res-title">—</div>
+    <div class="res-rows" id="res-rows"></div>
+    <div class="res-note" id="res-note"></div>
+    <div class="wa-sent" id="wa-sent" style="display:none">📱 Notificación enviada a tu familia</div>
+  </div>
+
+</div>
+
+<script>
+// ══ CONFIG ══
+const FB = {
+  apiKey:"AIzaSyARjZP37yHcNRtIFWXarSVvYJ4ZOChuZ54",
+  authDomain:"corposepi-carnets.firebaseapp.com",
+  databaseURL:"https://corposepi-carnets-default-rtdb.firebaseio.com",
+  projectId:"corposepi-carnets",
+  storageBucket:"corposepi-carnets.appspot.com"
+};
+
+let db, geoLat='', geoLng='', geoAcc='';
+
+// ── Init ──
+try{
+  if(!firebase.apps.length) firebase.initializeApp(FB);
+  db = firebase.database();
+}catch(e){ console.error(e); }
+
+// ── Leer parámetros ──
+const params = new URLSearchParams(window.location.search);
+const lugar  = decodeURIComponent(params.get('lugar')||'CORPOSEPI');
+const ahora  = new Date();
+const hoy    = ahora.toISOString().slice(0,10);
+
+document.getElementById('lugar-nombre').textContent = '📍 '+lugar;
+document.getElementById('lugar-fecha').textContent  =
+  ahora.toLocaleDateString('es-CO',{weekday:'long',year:'numeric',month:'long',day:'numeric'})+
+  ' · '+ahora.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
+
+// ── GPS ──
+const dot = document.getElementById('gps-dot');
+const txt = document.getElementById('gps-txt');
+if(navigator.geolocation){
+  navigator.geolocation.getCurrentPosition(
+    p=>{
+      geoLat = p.coords.latitude.toFixed(6);
+      geoLng = p.coords.longitude.toFixed(6);
+      geoAcc = Math.round(p.coords.accuracy);
+      dot.className='gps-dot ok';
+      txt.textContent='📍 '+geoLat+', '+geoLng+'  ±'+geoAcc+'m';
+    },
+    ()=>{ dot.className='gps-dot err'; txt.textContent='GPS no disponible'; },
+    {enableHighAccuracy:true,timeout:10000,maximumAge:0}
+  );
+} else {
+  dot.className='gps-dot err'; txt.textContent='GPS no soportado';
+}
+
+// ══ REGLAS FNX PUNTUALIDAD ══
+function calcPena(d){
+  const m = d.getHours()*60+d.getMinutes();
+  if(m <= 8*60+10) return {p:0,  lbl:'✅ A tiempo',               est:'P',  col:'ok'};
+  if(m <= 10*60+40)return {p:30, lbl:'🟠 Tardanza (-30 FNX)',      est:'T',  col:'warn'};
+                   return {p:75, lbl:'🔴 Tardanza grave (-75 FNX)', est:'TG', col:'bad'};
+}
+
+// ── Registrar ──
+async function registrar(){
+  const id  = document.getElementById('inp-id').value.trim().toUpperCase();
+  const doc = document.getElementById('inp-doc').value.trim();
+  const err = document.getElementById('err-msg');
+  err.classList.remove('show');
+
+  if(!id){ err.textContent='Ingresa tu ID CORPOSEPI.'; err.classList.add('show'); return; }
+  if(!doc){ err.textContent='Ingresa tu número de documento.'; err.classList.add('show'); return; }
+  if(!db){ err.textContent='Sin conexión. Intenta de nuevo.'; err.classList.add('show'); return; }
+
+  // Mostrar loader
+  document.getElementById('form-wrap').style.display='none';
+  document.getElementById('loader').style.display='block';
+
+  try{
+    // Buscar estudiante
+    const snap = await db.ref('corposepi/students').once('value');
+    const students = snap.val()||[];
+    const idx = students.findIndex(s=>s&&s.id===id&&s.numdoc===doc);
+
+    if(idx<0){
+      mostrarError('ID o número de documento incorrecto.\nVerifica e intenta de nuevo.');
+      return;
+    }
+    const est = students[idx];
+    if(est.status==='blocked'){
+      mostrarError('Carnet bloqueado.\nContacta administración: 📞 3208331239');
+      return;
+    }
+
+    // Verificar duplicado hoy
+    const safeId = id.replace(/[^a-z0-9]/gi,'-');
+    const yaSnap = await db.ref('asistencia/'+hoy+'/'+safeId).once('value');
+    if(yaSnap.val()){
+      const prev = yaSnap.val();
+      mostrarDuplicado(est, prev.hora);
+      return;
+    }
+
+    // Calcular pena
+    const ahora2 = new Date();
+    const hora   = ahora2.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
+    const pena   = calcPena(ahora2);
+    const fnxActual = parseFloat(est.fnx||0);
+    const fnxNuevo  = Math.max(0, fnxActual - pena.p);
+
+    // Actualizar FNX si hay penalidad
+    if(pena.p>0)
+      await db.ref('corposepi/students/'+idx+'/fnx').set(fnxNuevo.toFixed(2));
+
+    // Guardar registro
+    const reg = {
+      id, tipo:'student',
+      nombre: est.nombres+' '+est.apellidos,
+      fecha:hoy, hora,
+      timestamp: ahora2.toISOString(),
+      estado: pena.est,
+      penalidad_fnx: pena.p,
+      fnx_antes: fnxActual,
+      fnx_despues: fnxNuevo,
+      etiqueta: pena.lbl,
+      cel: est.cel||'',
+      lat: geoLat, lng: geoLng, acc: geoAcc,
+      lugar
+    };
+    await db.ref('asistencia/'+hoy+'/'+safeId).set(reg);
+
+    // Mostrar éxito
+    mostrarExito(est, hora, pena, fnxNuevo);
+
+    // Enviar WhatsApp a papás
+    if(est.cel && est.cel.replace(/\D/g,'').length>=10){
+      const celNum = est.cel.replace(/\D/g,'');
+      const locMsg = geoLat ? '\n📍 Ubicación: '+geoLat+', '+geoLng : '';
+      const puntMsg = pena.p>0
+        ? '\n⚠️ *Puntualidad:* '+pena.lbl+'\n🔥 FNX descontados: -'+pena.p+' (saldo: '+fnxNuevo.toFixed(0)+' FNX)'
+        : '\n✅ Llegó a tiempo · Sin descuento FNX';
+      const msg = encodeURIComponent(
+        '🏫 *CORPOSEPI*\n\n'+
+        '📋 *Registro de ingreso*\n\n'+
+        '👤 '+est.nombres+' '+est.apellidos+'\n'+
+        '🕐 Hora: '+hora+'\n'+
+        '📅 Fecha: '+hoy+'\n'+
+        '📍 Lugar: '+lugar+
+        puntMsg+locMsg+'\n\n'+
+        '📞 3208331239 · corposepi.org'
+      );
+      setTimeout(()=>window.open('https://wa.me/57'+celNum+'?text='+msg,'_blank'), 1000);
+      document.getElementById('wa-sent').style.display='block';
+    }
+
+  }catch(e){
+    mostrarError('Error de conexión.\n'+e.message);
+  }
+}
+
+function mostrarExito(est, hora, pena, fnxNuevo){
+  document.getElementById('loader').style.display='none';
+  const res = document.getElementById('result');
+  res.style.display='block';
+
+  document.getElementById('res-icon').textContent  = pena.p===0?'✅':'⚠️';
+  document.getElementById('res-title').textContent = '¡Asistencia registrada!';
+
+  document.getElementById('res-rows').innerHTML =
+    fila('👤 Estudiante', est.nombres+' '+est.apellidos)+
+    fila('🕐 Hora', hora)+
+    fila('📅 Fecha', hoy)+
+    fila('📍 Lugar', lugar)+
+    fila('⚡ Puntualidad', pena.lbl, pena.col)+
+    (pena.p>0 ? fila('🔥 FNX saldo', fnxNuevo.toFixed(0)+' FNX','warn') : '')+
+    (geoLat ? fila('🌍 GPS', geoLat+', '+geoLng) : '');
+
+  document.getElementById('res-note').textContent =
+    pena.p>0
+    ? 'Recuerda llegar antes de las 8:10 AM para no perder FNX.'
+    : '¡Perfecto! Llegaste a tiempo. Sigue así 💪';
+}
+
+function mostrarDuplicado(est, horaPrevia){
+  document.getElementById('loader').style.display='none';
+  const res = document.getElementById('result');
+  res.style.display='block';
+  document.getElementById('res-icon').textContent  = '⚠️';
+  document.getElementById('res-title').textContent = 'Ya registraste hoy';
+  document.getElementById('res-rows').innerHTML    =
+    fila('👤', est.nombres+' '+est.apellidos)+
+    fila('🕐 Hora de ingreso', horaPrevia)+
+    fila('📅 Fecha', hoy);
+  document.getElementById('res-note').textContent =
+    'Tu asistencia ya fue registrada a las '+horaPrevia+'.\nSi crees que es un error llama al 📞 3208331239';
+}
+
+function mostrarError(msg){
+  document.getElementById('loader').style.display='none';
+  document.getElementById('form-wrap').style.display='block';
+  const err = document.getElementById('err-msg');
+  err.textContent = msg;
+  err.classList.add('show');
+}
+
+function fila(label, valor, cls=''){
+  return '<div class="res-row"><span class="rl">'+label+'</span><span class="rv '+(cls||'')+'" style="text-align:right;max-width:55%">'+valor+'</span></div>';
+}
+</script>
+</body>
+</html>
