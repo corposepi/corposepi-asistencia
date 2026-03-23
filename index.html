@@ -11,486 +11,353 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
 :root{
-  --corp:#B8410A;--corp3:#E8651A;--gold:#D4A843;
+  --corp:#B8410A;--corp2:#E8651A;--gold:#D4A843;
   --dark:#0a0a0a;--dark2:#111;--dark3:#1e1e1e;--dark4:#2a2a2a;
   --text:#f0f0f0;--muted:#888;
   --green:#4ade80;--red:#f87171;--amber:#fbbf24;--blue:#60a5fa;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
-html,body{height:100%;font-family:'Montserrat',sans-serif;background:var(--dark);color:var(--text);}
+html,body{height:100%;font-family:'Montserrat',sans-serif;background:var(--dark);color:var(--text);overflow:hidden;}
 
-/* LOGIN */
+/* ── LOGIN ── */
+#login-screen{position:fixed;inset:0;background:radial-gradient(ellipse at 60% 40%,rgba(184,65,10,0.18) 0%,transparent 70%),var(--dark);display:flex;align-items:center;justify-content:center;z-index:9999;padding:1rem;}
+.login-box{width:100%;max-width:400px;background:rgba(255,255,255,0.04);backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,0.08);border-radius:22px;padding:2rem 1.75rem;}
+.login-logo{display:flex;flex-direction:column;align-items:center;margin-bottom:1.5rem;gap:.4rem;}
+.login-logo img{height:72px;filter:drop-shadow(0 4px 16px rgba(184,65,10,0.4));}
+.login-title{font-size:1.1rem;font-weight:800;letter-spacing:.08em;color:#fff;}
+.login-sub{font-size:.65rem;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;}
+.login-tabs{display:flex;background:var(--dark3);border-radius:12px;padding:4px;margin-bottom:1.25rem;gap:3px;}
+.ltab{flex:1;padding:.5rem;text-align:center;font-size:.72rem;font-weight:700;border-radius:9px;cursor:pointer;color:var(--muted);transition:all .2s;}
+.ltab.adm.active{background:#7f1d1d;color:#fff;}
+.ltab.doc.active{background:#78350f;color:#fff;}
+.ltab.est.active{background:#14532d;color:#fff;}
+.lform{display:flex;flex-direction:column;gap:.65rem;}
+.li{width:100%;background:var(--dark3);border:1px solid var(--dark4);border-radius:11px;padding:.62rem .9rem;color:var(--text);font-family:'Montserrat',sans-serif;font-size:.82rem;outline:none;transition:border .2s;}
+.li:focus{border-color:var(--corp);}
+.lbtn{background:linear-gradient(135deg,var(--corp),var(--corp2));border:none;border-radius:11px;padding:.72rem;color:#fff;font-family:'Montserrat',sans-serif;font-size:.85rem;font-weight:700;cursor:pointer;width:100%;}
+.lerr{color:var(--red);font-size:.7rem;display:none;text-align:center;}
+.lerr.show{display:block;}
+.lnote{font-size:.65rem;color:var(--muted);text-align:center;}
 
-
-.lb-head{text-align:center;margin-bottom:1.5rem;}
-
-
-
-
-/* Role selector */
-.role-tabs{display:flex;background:var(--dark3);border-radius:12px;padding:3px;margin-bottom:1.25rem;gap:2px;}
-.rt{flex:1;padding:.55rem .3rem;text-align:center;font-size:.7rem;font-weight:700;border-radius:9px;cursor:pointer;color:var(--muted);transition:all .2s;}
-.rt.active-doc{background:#92400e;color:#fff;}
-.rt.active-adm{background:#991b1b;color:#fff;}
-
-.lb-form{background:var(--dark3);border-radius:14px;padding:1.25rem;}
-.lb-label{font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--corp3);margin-bottom:.5rem;display:block;}
-
-
-
-
-
-.lb-btn-doc{background:linear-gradient(135deg,#92400e,var(--gold));}
-.lb-btn-adm{background:linear-gradient(135deg,#991b1b,#ef4444);}
-
-.lb-err.show{display:block;}
-.lb-note{font-size:.65rem;color:var(--muted);text-align:center;margin-top:.75rem;line-height:1.7;}
-
-/* APP */
-#app{display:none;height:100vh;flex-direction:column;}
-.topbar{background:var(--dark2);border-bottom:2px solid var(--corp);padding:.55rem 1rem;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
-.tb-info{display:flex;flex-direction:column;}
-.tb-title{font-size:.82rem;font-weight:800;color:#fff;}
-.tb-sub{font-size:.5rem;color:var(--muted);}
-.tb-right{display:flex;align-items:center;gap:.5rem;}
-.tb-user{font-size:.65rem;color:var(--muted);}
+/* ── APP ── */
+#app{height:100%;display:flex;flex-direction:column;}
+.topbar{background:var(--dark2);border-bottom:1px solid var(--dark3);padding:.65rem 1rem;display:flex;align-items:center;justify-content:space-between;}
+.tb-brand{font-size:.8rem;font-weight:800;letter-spacing:.06em;color:var(--corp2);}
+.tb-user{font-size:.68rem;color:var(--muted);display:flex;align-items:center;gap:.4rem;}
 .tb-badge{font-size:.55rem;padding:2px 8px;border-radius:99px;font-weight:700;}
+.tbb-adm{background:rgba(248,113,113,.15);color:var(--red);border:1px solid rgba(248,113,113,.3);}
 .tbb-doc{background:rgba(212,168,67,.15);color:var(--gold);border:1px solid rgba(212,168,67,.3);}
-.tbb-adm{background:rgba(248,113,113,.12);color:var(--red);border:1px solid rgba(248,113,113,.3);}
-.tb-clock{font-family:'DM Mono',monospace;font-size:.6rem;color:var(--muted);}
-.tb-out{background:transparent;border:1px solid #333;border-radius:7px;padding:.3rem .65rem;color:var(--muted);font-family:'Montserrat',sans-serif;font-size:.65rem;cursor:pointer;}
+.tbb-est{background:rgba(74,222,128,.15);color:var(--green);border:1px solid rgba(74,222,128,.3);}
+.tb-logout{font-size:.65rem;color:var(--muted);background:none;border:1px solid var(--dark4);border-radius:7px;padding:3px 8px;cursor:pointer;}
 
-/* DOCENTE INGRESO BANNER */
-.docente-banner{background:linear-gradient(135deg,rgba(212,168,67,.1),rgba(146,64,14,.08));border-bottom:1px solid rgba(212,168,67,.2);padding:.6rem 1rem;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
-.db-info{font-size:.72rem;color:var(--gold);}
-.db-time{font-family:'DM Mono',monospace;font-size:.7rem;color:var(--muted);}
+.tabs{display:flex;background:var(--dark2);border-bottom:1px solid var(--dark3);}
+.tab{flex:1;padding:.6rem .3rem;text-align:center;font-size:.62rem;font-weight:700;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;letter-spacing:.03em;}
+.tab.active{color:var(--corp2);border-bottom-color:var(--corp);}
 
-/* TABS */
-.tabs{display:flex;background:var(--dark2);border-bottom:1px solid var(--dark3);flex-shrink:0;overflow-x:auto;}
-.tab{flex:1;min-width:80px;padding:.65rem .4rem;text-align:center;font-size:.68rem;font-weight:700;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;}
-.tab.active{color:var(--corp3);border-bottom-color:var(--corp);}
-.tab-content{display:none;flex:1;overflow-y:auto;}
-.tab-content.active{display:flex;flex-direction:column;}
+.tab-content{display:none;flex:1;overflow-y:auto;flex-direction:column;}
+.tab-content.active{display:flex;}
 
-/* SCANNER */
-.sw{padding:1rem;display:flex;flex-direction:column;gap:.75rem;max-width:500px;margin:0 auto;width:100%;}
+/* ── ESCANEAR ── */
+.scan-wrap{padding:1rem;display:flex;flex-direction:column;gap:.85rem;max-width:520px;margin:0 auto;width:100%;}
 
-/* CLASE INFO */
-.clase-card{background:var(--dark2);border:1px solid var(--dark3);border-radius:14px;padding:1rem;}
-.cc-title{font-size:.58rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:.6rem;}
-.cc-grid{display:grid;grid-template-columns:1fr 1fr;gap:.4rem;}
-.cc-sel{padding:.48rem .7rem;border:1px solid var(--dark4);border-radius:8px;background:var(--dark3);color:var(--text);font-family:'Montserrat',sans-serif;font-size:.75rem;outline:none;width:100%;}
+/* Ubicación */
+.loc-bar{background:var(--dark3);border:1px solid var(--dark4);border-radius:12px;padding:.7rem 1rem;display:flex;align-items:center;gap:.6rem;font-size:.7rem;}
+.loc-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex-shrink:0;}
+.loc-dot.ok{background:var(--green);animation:pulse 2s infinite;}
+.loc-dot.err{background:var(--red);}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.loc-txt{color:var(--muted);flex:1;font-size:.65rem;}
 
-/* MODE TABS */
-.mode-tabs{display:flex;background:var(--dark3);border-radius:11px;padding:3px;gap:2px;}
-.mt{flex:1;padding:.48rem;text-align:center;font-size:.7rem;font-weight:700;border-radius:8px;cursor:pointer;color:var(--muted);transition:all .2s;}
-.mt.active{background:var(--corp);color:#fff;}
-
-/* CAMERA */
-.cam-box{background:var(--dark2);border:2px solid var(--dark3);border-radius:14px;overflow:hidden;position:relative;aspect-ratio:1;width:100%;}
-.cam-box video{width:100%;height:100%;object-fit:cover;display:block;}
-.cam-box canvas{display:none;}
-.cam-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;}
-.cam-frame{width:65%;aspect-ratio:1;border:3px solid var(--corp3);border-radius:12px;box-shadow:0 0 0 2000px rgba(0,0,0,.5);}
-.cam-line{position:absolute;width:60%;height:2px;background:linear-gradient(90deg,transparent,var(--corp3),transparent);animation:scan 2s linear infinite;}
+/* Cámara */
+.cam-box{background:var(--dark3);border:1px solid var(--dark4);border-radius:16px;overflow:hidden;aspect-ratio:1;position:relative;display:flex;align-items:center;justify-content:center;}
+#cam-video{width:100%;height:100%;object-fit:cover;display:none;}
+.cam-idle{display:flex;flex-direction:column;align-items:center;gap:.5rem;color:var(--muted);font-size:.75rem;}
+.cam-line{position:absolute;width:60%;height:2px;background:linear-gradient(90deg,transparent,var(--corp2),transparent);animation:scan 2s linear infinite;display:none;}
 @keyframes scan{0%{top:18%}100%{top:82%}}
-.cam-label{position:absolute;bottom:1rem;left:0;right:0;text-align:center;font-size:.7rem;font-weight:600;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.9);}
-.cam-btn{width:100%;background:linear-gradient(135deg,var(--corp),var(--corp3));border:none;border-radius:12px;padding:.82rem;color:#fff;font-family:'Montserrat',sans-serif;font-size:.88rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:.5rem;}
-.cam-stop{width:100%;background:var(--dark3);border:1px solid var(--dark4);border-radius:12px;padding:.72rem;color:var(--red);font-family:'Montserrat',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer;}
+.cam-btn{width:100%;background:linear-gradient(135deg,var(--corp),var(--corp2));border:none;border-radius:12px;padding:.72rem;color:#fff;font-family:'Montserrat',sans-serif;font-size:.85rem;font-weight:700;cursor:pointer;}
 
-/* MANUAL */
-.manual-card{background:var(--dark2);border:1px solid var(--dark3);border-radius:14px;padding:1.1rem;}
-.mc-lbl{font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--corp3);margin-bottom:.5rem;}
-.mc-inp{width:100%;background:var(--dark3);border:1px solid var(--dark4);border-radius:10px;padding:.7rem 1rem;color:var(--text);font-family:'DM Mono',monospace;font-size:.95rem;outline:none;margin-bottom:.55rem;text-transform:uppercase;letter-spacing:.05em;transition:border .2s;text-align:center;}
-.mc-inp:focus{border-color:var(--corp);}
-.mc-btn{width:100%;background:linear-gradient(135deg,var(--corp),var(--corp3));border:none;border-radius:10px;padding:.75rem;color:#fff;font-family:'Montserrat',sans-serif;font-size:.85rem;font-weight:700;cursor:pointer;}
+/* Manual */
+.manual-card{background:var(--dark3);border:1px solid var(--dark4);border-radius:14px;padding:1rem;}
+.mc-title{font-size:.75rem;font-weight:700;margin-bottom:.65rem;color:var(--muted);}
+.mc-inp{width:100%;background:var(--dark4);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:.58rem .85rem;color:var(--text);font-family:'DM Mono',monospace;font-size:.82rem;outline:none;margin-bottom:.5rem;text-transform:uppercase;}
+.mc-btn{width:100%;background:var(--dark4);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:.6rem;color:var(--text);font-family:'Montserrat',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;}
 
-/* RESULT */
-.result{border-radius:14px;padding:1rem;display:none;animation:fadeIn .3s ease;}
-@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-.r-ok{background:rgba(74,222,128,.07);border:1px solid rgba(74,222,128,.3);}
-.r-err{background:rgba(248,113,113,.07);border:1px solid rgba(248,113,113,.3);}
-.r-dup{background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.3);}
-.r-header{display:flex;align-items:center;gap:.75rem;margin-bottom:.75rem;}
-.r-ico{font-size:1.8rem;flex-shrink:0;}
-.r-name{font-size:.92rem;font-weight:800;line-height:1.2;}
-.r-prog{font-size:.68rem;color:var(--muted);margin-top:.15rem;}
-.r-rows{display:flex;flex-direction:column;gap:.3rem;}
-.r-row{display:flex;justify-content:space-between;font-size:.72rem;padding:.3rem 0;border-bottom:1px solid rgba(255,255,255,.04);}
-.r-row:last-child{border-bottom:none;}
+/* Resultado */
+.result{background:var(--dark3);border-radius:14px;padding:1rem;display:none;}
+.result.ok-box{border:1px solid rgba(74,222,128,.3);}
+.result.err-box{border:1px solid rgba(248,113,113,.3);}
+.result.dup-box{border:1px solid rgba(251,191,36,.3);}
+.r-name{font-size:1rem;font-weight:800;margin-bottom:.3rem;}
+.r-row{display:flex;justify-content:space-between;font-size:.72rem;padding:.25rem 0;border-bottom:1px solid rgba(255,255,255,.05);}
+.r-row:last-child{border:none;}
 .rl{color:var(--muted);}
-.rv{font-weight:600;font-family:'DM Mono',monospace;font-size:.7rem;}
-.wa-btn{width:100%;background:#25D366;border:none;border-radius:10px;padding:.6rem;color:#fff;font-family:'Montserrat',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;margin-top:.7rem;display:flex;align-items:center;justify-content:center;gap:.4rem;}
+.rv{font-weight:600;}
+.rv.ok{color:var(--green);}
+.rv.warn{color:var(--amber);}
+.rv.bad{color:var(--red);}
+.wa-btn{width:100%;margin-top:.75rem;background:linear-gradient(135deg,#25D366,#128C7E);border:none;border-radius:10px;padding:.65rem;color:#fff;font-family:'Montserrat',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;}
 
-/* QR SALON */
-.qrsw{padding:1rem;display:flex;flex-direction:column;gap:.75rem;max-width:500px;margin:0 auto;width:100%;}
-.qrs-card{background:var(--dark2);border:1px solid var(--dark3);border-radius:14px;padding:1.1rem;}
-.qrs-title{font-size:.82rem;font-weight:700;margin-bottom:.7rem;color:var(--text);}
-.qrs-inp{width:100%;background:var(--dark3);border:1px solid var(--dark4);border-radius:10px;padding:.58rem .85rem;color:var(--text);font-family:'Montserrat',sans-serif;font-size:.8rem;outline:none;margin-bottom:.45rem;transition:border .2s;}
-.qrs-inp:focus{border-color:var(--corp);}
-.qrs-sel{width:100%;background:var(--dark3);border:1px solid var(--dark4);border-radius:10px;padding:.58rem .85rem;color:var(--text);font-family:'Montserrat',sans-serif;font-size:.8rem;outline:none;margin-bottom:.45rem;cursor:pointer;}
-.qrs-btn{width:100%;background:linear-gradient(135deg,var(--corp),var(--corp3));border:none;border-radius:10px;padding:.68rem;color:#fff;font-family:'Montserrat',sans-serif;font-size:.83rem;font-weight:700;cursor:pointer;}
-.qr-print{background:#fff;border-radius:14px;padding:1.25rem;text-align:center;}
-.qrp-salon{font-size:1rem;font-weight:800;color:#1a1a1a;margin-bottom:.15rem;}
-.qrp-info{font-size:.68rem;color:#666;margin-bottom:.7rem;}
-.qrp-qr{display:flex;justify-content:center;margin-bottom:.65rem;}
-.qrp-url{font-family:'DM Mono',monospace;font-size:.55rem;color:#B8410A;word-break:break-all;background:#f5f0e8;padding:.35rem .6rem;border-radius:6px;}
-.qrp-note{font-size:.6rem;color:#aaa;margin-top:.35rem;}
-.print-btn{width:100%;background:var(--dark);border:none;border-radius:9px;padding:.6rem;color:#fff;font-family:'Montserrat',sans-serif;font-size:.78rem;font-weight:600;cursor:pointer;margin-top:.5rem;}
+/* ── REPORTE ── */
+.rep-wrap{padding:1rem;display:flex;flex-direction:column;gap:.75rem;}
+.rep-filt{display:flex;gap:.5rem;flex-wrap:wrap;}
+.rep-inp{flex:1;min-width:120px;background:var(--dark3);border:1px solid var(--dark4);border-radius:9px;padding:.5rem .75rem;color:var(--text);font-family:'Montserrat',sans-serif;font-size:.75rem;outline:none;}
+.rep-btn{background:var(--corp);border:none;border-radius:9px;padding:.5rem .9rem;color:#fff;font-family:'Montserrat',sans-serif;font-size:.75rem;font-weight:700;cursor:pointer;}
+.rep-table{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:.7rem;}
+th{background:var(--dark3);padding:.5rem .6rem;text-align:left;font-weight:700;color:var(--muted);white-space:nowrap;}
+td{padding:.45rem .6rem;border-bottom:1px solid var(--dark3);vertical-align:middle;}
+.badge-ok{background:rgba(74,222,128,.12);color:var(--green);border:1px solid rgba(74,222,128,.25);padding:2px 7px;border-radius:99px;font-size:.58rem;font-weight:700;}
+.badge-late{background:rgba(251,191,36,.12);color:var(--amber);border:1px solid rgba(251,191,36,.25);padding:2px 7px;border-radius:99px;font-size:.58rem;font-weight:700;}
+.badge-aus{background:rgba(248,113,113,.12);color:var(--red);border:1px solid rgba(248,113,113,.25);padding:2px 7px;border-radius:99px;font-size:.58rem;font-weight:700;}
+.badge-doc{background:rgba(96,165,250,.12);color:var(--blue);border:1px solid rgba(96,165,250,.25);padding:2px 7px;border-radius:99px;font-size:.58rem;font-weight:700;}
+.mono{font-family:'DM Mono',monospace;font-size:.65rem;}
 
-/* REPORTE */
-.rw{padding:1rem;display:flex;flex-direction:column;gap:.75rem;max-width:800px;margin:0 auto;width:100%;}
-.rf{background:var(--dark2);border:1px solid var(--dark3);border-radius:14px;padding:1rem;}
-.rf-grid{display:grid;grid-template-columns:1fr 1fr;gap:.45rem;margin-bottom:.5rem;}
-.rf-inp{padding:.48rem .75rem;border:1px solid var(--dark4);border-radius:8px;background:var(--dark3);color:var(--text);font-family:'Montserrat',sans-serif;font-size:.76rem;outline:none;width:100%;}
-.rf-sel{padding:.48rem .75rem;border:1px solid var(--dark4);border-radius:8px;background:var(--dark3);color:var(--text);font-family:'Montserrat',sans-serif;font-size:.76rem;outline:none;width:100%;cursor:pointer;}
-.rf-btn{width:100%;background:var(--corp);border:none;border-radius:8px;padding:.52rem;color:#fff;font-family:'Montserrat',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;}
-.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:.55rem;}
-.st{background:var(--dark2);border:1px solid var(--dark3);border-radius:12px;padding:.8rem;text-align:center;}
-.st-v{font-size:1.4rem;font-weight:800;line-height:1;}
-.st-l{font-size:.55rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-top:.2rem;}
-.rep-tbl{background:var(--dark2);border:1px solid var(--dark3);border-radius:14px;overflow:hidden;}
-.rep-head{display:flex;align-items:center;justify-content:space-between;padding:.7rem 1rem;border-bottom:1px solid var(--dark3);}
-.rep-ttl{font-size:.8rem;font-weight:700;}
-.rep-type-tabs{display:flex;gap:.3rem;}
-.rtt{font-size:.65rem;padding:3px 10px;border-radius:99px;cursor:pointer;border:1px solid var(--dark4);color:var(--muted);background:transparent;}
-.rtt.active{background:var(--corp);border-color:var(--corp);color:#fff;}
-.rep-exp{background:transparent;border:1px solid var(--dark4);border-radius:7px;padding:.28rem .65rem;color:var(--muted);font-family:'Montserrat',sans-serif;font-size:.65rem;cursor:pointer;}
-table{width:100%;border-collapse:collapse;}
-th{font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;padding:.48rem .72rem;text-align:left;border-bottom:1px solid var(--dark3);background:var(--dark3);white-space:nowrap;}
-td{font-size:.73rem;padding:.48rem .72rem;border-bottom:1px solid rgba(255,255,255,.04);vertical-align:middle;}
-tr:last-child td{border-bottom:none;}
-tr:hover td{background:rgba(255,255,255,.02);}
-.mono{font-family:'DM Mono',monospace;font-size:.67rem;color:var(--muted);}
-.badge{display:inline-flex;align-items:center;font-size:.6rem;padding:2px 7px;border-radius:99px;font-weight:700;}
-.b-p{background:rgba(74,222,128,.1);color:#4ade80;border:1px solid rgba(74,222,128,.25);}
-.b-a{background:rgba(248,113,113,.1);color:#f87171;border:1px solid rgba(248,113,113,.25);}
-.b-t{background:rgba(251,191,36,.1);color:#fbbf24;border:1px solid rgba(251,191,36,.25);}
-.b-doc{background:rgba(212,168,67,.12);color:var(--gold);border:1px solid rgba(212,168,67,.25);}
+/* ── 2PM indicator ── */
+.pm-bar{background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);border-radius:10px;padding:.6rem .85rem;font-size:.68rem;color:var(--amber);display:none;align-items:center;gap:.5rem;}
 
-.toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:var(--dark2);color:#fff;padding:.5rem 1.2rem;border-radius:99px;font-size:.75rem;font-weight:600;opacity:0;transition:opacity .3s;pointer-events:none;z-index:9999;border-left:3px solid var(--corp);white-space:nowrap;max-width:92vw;text-align:center;}
+
+/* ── QR PANEL ── */
+.qr-wrap{padding:1rem;display:flex;flex-direction:column;gap:1rem;max-width:500px;margin:0 auto;width:100%;}
+.qr-card{background:var(--dark3);border:1px solid var(--dark4);border-radius:16px;padding:1.25rem;}
+.qr-card-title{font-size:.82rem;font-weight:800;margin-bottom:.85rem;color:var(--text);}
+.qr-inp{width:100%;background:var(--dark4);border:1px solid rgba(255,255,255,.08);border-radius:11px;padding:.62rem .9rem;color:var(--text);font-family:'Montserrat',sans-serif;font-size:.82rem;outline:none;margin-bottom:.55rem;transition:border .2s;}
+.qr-inp:focus{border-color:var(--corp);}
+.qr-btn{width:100%;background:linear-gradient(135deg,var(--corp),var(--corp2));border:none;border-radius:11px;padding:.72rem;color:#fff;font-family:'Montserrat',sans-serif;font-size:.85rem;font-weight:700;cursor:pointer;margin-bottom:.5rem;}
+.qr-btn-sec{width:100%;background:var(--dark4);border:1px solid rgba(255,255,255,.1);border-radius:11px;padding:.65rem;color:var(--text);font-family:'Montserrat',sans-serif;font-size:.8rem;font-weight:600;cursor:pointer;}
+
+/* QR para imprimir */
+.qr-print-wrap{background:#fff;border-radius:18px;padding:1.5rem;text-align:center;margin-top:.5rem;}
+.qrp-logo{font-size:1.6rem;margin-bottom:.2rem;}
+.qrp-inst{font-size:.55rem;color:#B8410A;font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.15rem;}
+.qrp-title{font-size:1rem;font-weight:900;color:#1a1a1a;margin-bottom:.1rem;}
+.qrp-sub{font-size:.62rem;color:#666;margin-bottom:.85rem;}
+.qrp-qr{display:flex;justify-content:center;margin-bottom:.75rem;}
+.qrp-steps{text-align:left;background:#f5f0e8;border-radius:10px;padding:.75rem 1rem;margin-bottom:.75rem;}
+.qrp-step{font-size:.6rem;color:#333;margin-bottom:.2rem;line-height:1.5;}
+.qrp-url{font-family:'DM Mono',monospace;font-size:.48rem;color:#B8410A;word-break:break-all;background:#fef3e8;padding:.35rem .6rem;border-radius:6px;border:1px dashed #B8410A;}
+.qrp-footer{font-size:.52rem;color:#aaa;margin-top:.6rem;}
+
+/* QR pantalla grande (para que estudiantes escaneen desde el profe) */
+.qr-screen-wrap{background:var(--dark3);border:2px solid var(--corp);border-radius:18px;padding:1.5rem;text-align:center;display:none;}
+.qrs-title-big{font-size:1.1rem;font-weight:900;color:var(--text);margin-bottom:.3rem;}
+.qrs-sub{font-size:.72rem;color:var(--muted);margin-bottom:1rem;}
+.qrs-qr-big{display:flex;justify-content:center;margin-bottom:1rem;}
+.qrs-instruction{font-size:.8rem;font-weight:700;color:var(--corp2);background:rgba(184,65,10,.1);border:1px solid rgba(184,65,10,.2);border-radius:10px;padding:.65rem;}
+.qrs-close{margin-top:.75rem;background:var(--dark4);border:1px solid var(--dark3);border-radius:10px;padding:.5rem 1.25rem;color:var(--muted);font-family:'Montserrat',sans-serif;font-size:.75rem;cursor:pointer;}
+
+.toast{position:fixed
+.toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:#fff;color:#000;padding:.6rem 1.25rem;border-radius:99px;font-size:.75rem;font-weight:700;opacity:0;transition:opacity .3s;pointer-events:none;z-index:9999;white-space:nowrap;max-width:90vw;text-align:center;}
 .toast.show{opacity:1;}
-
-@media(max-width:420px){.stats-row{grid-template-columns:1fr 1fr;}.rf-grid{grid-template-columns:1fr;}.cc-grid{grid-template-columns:1fr;}}
-@media print{#app .topbar,.tabs,.docente-banner{display:none!important;}.qr-print{border:2px solid #000;}}
-
-.lb-err.show{display:block;}
-
-
-/* ══ LOGIN ELEGANTE V2 ══ */
-#login{
-  position:fixed;inset:0;
-  background:linear-gradient(135deg,#0a0a0a 0%,#111827 50%,#0a0a0a 100%);
-  display:flex;align-items:center;justify-content:center;
-  z-index:999;padding:1rem;overflow:hidden;
-}
-#login::before{
-  content:'';position:absolute;inset:0;
-  background:radial-gradient(ellipse 70% 50% at 50% 0%,rgba(184,65,10,0.15) 0%,transparent 70%),
-             radial-gradient(ellipse 50% 40% at 90% 100%,rgba(212,168,67,0.08) 0%,transparent 60%);
-  pointer-events:none;
-}
-.login-box{
-  position:relative;z-index:1;
-  background:rgba(255,255,255,0.03);
-  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
-  border:1px solid rgba(255,255,255,0.07);
-  border-radius:28px;
-  padding:2.5rem 2rem 2rem;
-  max-width:390px;width:100%;
-  text-align:center;
-  box-shadow:0 0 0 1px rgba(184,65,10,0.12),0 24px 64px rgba(0,0,0,0.6),inset 0 1px 0 rgba(255,255,255,0.05);
-}
-.login-logo{
-  width:110px;height:110px;
-  margin:0 auto 1rem;
-  display:flex;align-items:center;justify-content:center;
-}
-.login-logo img{
-  width:100%;height:100%;
-  object-fit:contain;
-  filter:drop-shadow(0 4px 16px rgba(184,65,10,0.3));
-}
-.lb-icon{font-size:0;margin:0;}
-.lb-title{font-size:1.3rem;font-weight:800;color:#fff;margin-bottom:.25rem;letter-spacing:-.01em;}
-.lb-sub{font-size:.65rem;color:rgba(255,255,255,0.3);margin-bottom:1.75rem;letter-spacing:.08em;text-transform:uppercase;}
-.lb-input,.lb-select{
-  width:100%;box-sizing:border-box;
-  background:rgba(255,255,255,0.05);
-  border:1px solid rgba(255,255,255,0.09);
-  border-radius:13px;
-  padding:.78rem 1rem;
-  color:#fff;
-  font-family:'Montserrat',sans-serif;font-size:.875rem;
-  outline:none;margin-bottom:.65rem;
-  transition:border .2s,background .2s;
-}
-.lb-input:focus,.lb-select:focus{border-color:rgba(184,65,10,0.55);background:rgba(184,65,10,0.05);}
-.lb-input::placeholder{color:rgba(255,255,255,0.18);}
-.lb-select option{background:#1a1a1a;color:#fff;}
-.lb-btn{
-  width:100%;
-  background:linear-gradient(135deg,#B8410A,#E8651A);
-  border:none;border-radius:13px;
-  padding:.9rem;color:#fff;
-  font-family:'Montserrat',sans-serif;font-size:.9rem;font-weight:700;
-  cursor:pointer;letter-spacing:.02em;
-  box-shadow:0 6px 24px rgba(184,65,10,0.4);
-  transition:opacity .2s,transform .1s;
-}
-.lb-btn:hover{opacity:.88;}
-.lb-btn:active{transform:scale(.98);}
-.lb-err{
-  background:rgba(248,113,113,.07);border:1px solid rgba(248,113,113,.2);
-  border-radius:10px;padding:.55rem;font-size:.72rem;color:#f87171;
-  margin-bottom:.65rem;display:none;
-}
-.lb-err.show{display:block;}
-
+@media print{.topbar,.tabs,.scan-wrap .cam-box,.manual-card,.wa-btn,.loc-bar{display:none!important;}}
 </style>
 </head>
 <body>
 
-<!-- ══ LOGIN ══ -->
-<div id="login">
+<!-- LOGIN -->
+<div id="login-screen">
   <div class="login-box">
-    <div class="lb-head">
-      
-    <div class="login-logo"><img src="https://corposepi.github.io/corposepi-aprende/logo.png" alt="CORPOSEPI"/></div>
-    <div class="lb-icon">📋</div>
-    <div class="lb-title">Control de Asistencia</div>
-    <div class="lb-sub">CORPOSEPI · Sistema docente</div>
+    <div class="login-logo">
+      <img src="https://corposepi.github.io/corposepi-aprende/logo.png" alt="CORPOSEPI"/>
+      <div class="login-title">CORPOSEPI</div>
+      <div class="login-sub">Control de Asistencia</div>
     </div>
-    <div class="role-tabs">
-      <div class="rt active-doc" onclick="switchLoginRole('docente',this)">👩‍🏫 Docente / Personal</div>
-      <div class="rt" onclick="switchLoginRole('admin',this)">⚙️ Administrador</div>
+    <div class="login-tabs">
+      <div class="ltab adm active" onclick="switchTab('adm',this)">⚙️ Admin</div>
+      <div class="ltab doc" onclick="switchTab('doc',this)">👩‍🏫 Docente</div>
+      <div class="ltab est" onclick="switchTab('est',this)">🎓 Estudiante</div>
     </div>
-    <div class="lb-form">
-      <!-- DOCENTE -->
-      <div id="lf-docente">
-        <label class="lb-label">Tu nombre completo</label>
-        <input class="lb-input" id="doc-nombre" placeholder="Prof. García Rodríguez"/>
-        <label class="lb-label">Tu cargo</label>
-        <select class="lb-select" id="doc-cargo">
-          <option value="">— Selecciona tu cargo —</option>
-          <option>Docente</option>
-          <option>Coordinador</option>
-          <option>Director</option>
-          <option>Orientador / Psicólogo</option>
-          <option>Administrativo / Secretaría</option>
-          <option>Personal de Apoyo</option>
-        </select>
-        <div class="lb-err" id="err-docente">Contraseña incorrecta.</div>
-        <input class="lb-input" id="doc-pass" type="password" placeholder="Contraseña" onkeydown="if(event.key==='Enter')loginDocente()"/>
-        <button class="lb-btn lb-btn-doc" onclick="loginDocente()">Registrar ingreso y entrar</button>
-        <div class="lb-note"></div>
-      </div>
-      <!-- ADMIN -->
-      <div id="lf-admin" style="display:none;">
-        <div class="lb-err" id="err-admin">Contraseña incorrecta.</div>
-        <input class="lb-input" id="adm-pass" type="password" placeholder="Contraseña admin" onkeydown="if(event.key==='Enter')loginAdmin()"/>
-        <button class="lb-btn lb-btn-adm" onclick="loginAdmin()">Ingresar como Admin</button>
-        <div class="lb-note"> · <strong></strong></div>
-      </div>
+
+    <!-- Admin -->
+    <div id="lf-adm" class="lform">
+      <div class="lerr" id="err-adm">Contraseña incorrecta.</div>
+      <input class="li" id="adm-pass" type="password" placeholder="Contraseña admin" onkeydown="if(event.key==='Enter')loginAdmin()"/>
+      <button class="lbtn" onclick="loginAdmin()">Ingresar como Admin</button>
+    </div>
+
+    <!-- Docente -->
+    <div id="lf-doc" class="lform" style="display:none">
+      <div class="lerr" id="err-doc">ID o documento incorrecto.</div>
+      <input class="li" id="doc-id" placeholder="Tu ID (ej: CORP-P-001)" onkeydown="if(event.key==='Enter')loginDocente()"/>
+      <input class="li" id="doc-ndoc" placeholder="Número de documento" onkeydown="if(event.key==='Enter')loginDocente()"/>
+      <button class="lbtn" onclick="loginDocente()">Ingresar</button>
+    </div>
+
+    <!-- Estudiante -->
+    <div id="lf-est" class="lform" style="display:none">
+      <div class="lerr" id="err-est">ID o documento incorrecto.</div>
+      <input class="li" id="est-id" placeholder="Tu ID (ej: CORP-2025-0001)" onkeydown="if(event.key==='Enter')loginEstudiante()"/>
+      <input class="li" id="est-ndoc" placeholder="Número de documento" onkeydown="if(event.key==='Enter')loginEstudiante()"/>
+      <button class="lbtn" onclick="loginEstudiante()">Ver mi asistencia</button>
+      <div class="lnote">📞 3208331239 · corposepi.org</div>
     </div>
   </div>
 </div>
 
-<!-- ══ APP ══ -->
-<div id="app">
+<!-- APP -->
+<div id="app" style="display:none">
   <div class="topbar">
-    <div class="tb-info">
-      <div class="tb-title" style="display:flex;align-items:center;gap:.5rem;"> Asistencia CORPOSEPI</div>
-      <div class="tb-sub" id="tb-sub">Módulo 2 · corposepi.org</div>
-    </div>
-    <div class="tb-right">
-      <div style="text-align:right;">
-        <div class="tb-user" id="tb-user">—</div>
-        <div class="tb-clock" id="tb-clock">—</div>
-      </div>
+    <div class="tb-brand">CORPOSEPI · Asistencia</div>
+    <div class="tb-user">
+      <span id="tb-user">—</span>
       <span class="tb-badge" id="tb-badge">—</span>
-      <button class="tb-out" onclick="location.reload()">Salir</button>
+      <button class="tb-logout" onclick="logout()">Salir</button>
     </div>
   </div>
 
-  <!-- Banner ingreso docente -->
-  <div class="docente-banner" id="doc-banner" style="display:none;">
-    <div class="db-info">✅ Tu ingreso fue registrado · <span id="doc-cargo-banner">—</span></div>
-    <div class="db-time" id="doc-hora-banner">—</div>
+  <div class="tabs" id="tabs-bar">
+    <div class="tab active" id="tab-btn-scan" onclick="showTab('scan',this)">📷 Escanear</div>
+    <div class="tab" id="tab-btn-rep" onclick="showTab('rep',this)">📋 Reporte</div>
+    <div class="tab" id="tab-btn-qr" onclick="showTab('qr',this)" style="display:none">🖨️ QR</div>
+    <div class="tab" id="tab-btn-pm" onclick="showTab('pm',this)" style="display:none">🕑 2PM</div>
   </div>
 
-  <div class="tabs" id="app-tabs">
-    <!-- tabs se insertan por JS según rol -->
-  </div>
+  <!-- TAB ESCANEAR -->
+  <div class="tab-content active" id="tab-scan">
+    <div class="scan-wrap">
 
-  <!-- ══ TAB: ESCANEAR ESTUDIANTES ══ -->
-  <div class="tab-content" id="tab-escanear">
-    <div class="sw">
-      <!-- Clase activa -->
-      <div class="clase-card">
-        <div class="cc-title">📚 Clase activa — selecciona antes de escanear</div>
-        <div class="cc-grid">
-          <select class="cc-sel" id="cl-nivel">
-            <option value="">Nivel / Grupo</option>
-            <option>Preescolar — Transición</option>
-            <option>Básica Primaria — 1°</option><option>Básica Primaria — 2°</option>
-            <option>Básica Primaria — 3°</option><option>Básica Primaria — 4°</option>
-            <option>Básica Primaria — 5°</option>
-            <option>Básica Secundaria — 6°</option><option>Básica Secundaria — 7°</option>
-            <option>Básica Secundaria — 8°</option><option>Básica Secundaria — 9°</option>
-            <option>Media — 10°</option><option>Media — 11°</option>
-            <option>Adultos</option><option>Inglés A1</option><option>Inglés A2</option>
-            <option>Inglés B1</option><option>Inglés B2</option>
-            <option>Diplomado</option><option>Curso</option>
-          </select>
-          <select class="cc-sel" id="cl-materia">
-            <option value="">Materia / Área</option>
-            <option>Matemáticas</option><option>Español</option>
-            <option>Ciencias Naturales</option><option>Ciencias Sociales</option>
-            <option>Inglés</option><option>Educación Física</option>
-            <option>Artes</option><option>Tecnología</option>
-            <option>Ética</option><option>Religión</option>
-            <option>Emprendimiento</option><option>Blockchain</option><option>Otra</option>
-          </select>
+      <!-- Ubicación -->
+      <div class="loc-bar">
+        <div class="loc-dot" id="loc-dot"></div>
+        <div class="loc-txt" id="loc-txt">Obteniendo ubicación...</div>
+      </div>
+
+      <!-- Indicador 2PM -->
+      <div class="pm-bar" id="pm-bar">
+        🕑 <strong>2:00 PM alcanzado</strong> — Los estudiantes sin registro serán marcados como ausentes.
+        <button onclick="ejecutar2PM()" style="background:var(--amber);color:#000;border:none;border-radius:7px;padding:3px 10px;font-size:.65rem;font-weight:700;cursor:pointer;margin-left:auto;">Ejecutar ahora</button>
+      </div>
+
+      <!-- Cámara QR -->
+      <div class="cam-box" id="cam-box">
+        <video id="cam-video" playsinline autoplay muted></video>
+        <div class="cam-line" id="cam-line"></div>
+        <div class="cam-idle" id="cam-idle">
+          <div style="font-size:2.5rem">📷</div>
+          <div>Cámara inactiva</div>
         </div>
       </div>
+      <button class="cam-btn" id="btn-cam" onclick="toggleCam()">📷 Activar cámara — escanear QR</button>
 
-      <!-- Modo -->
-      <div class="mode-tabs">
-        <div class="mt active" onclick="setMode('camara',this)">📷 Cámara QR</div>
-        <div class="mt" onclick="setMode('manual',this)">⌨️ ID Manual</div>
+      <!-- Manual -->
+      <div class="manual-card">
+        <div class="mc-title">✍️ Ingreso manual de ID</div>
+        <input class="mc-inp" id="manual-id" placeholder="CORP-2025-0001" onkeydown="if(event.key==='Enter')registrarManual()"/>
+        <button class="mc-btn" onclick="registrarManual()">✅ Registrar asistencia</button>
       </div>
 
-      <!-- CAMARA -->
-      <div id="m-camara">
-        <div class="cam-box" id="cam-box" style="display:none;">
-          <video id="cam-vid" autoplay playsinline muted></video>
-          <canvas id="cam-cvs"></canvas>
-          <div class="cam-overlay">
-            <div class="cam-frame"></div>
-            <div class="cam-line"></div>
-          </div>
-          <div class="cam-label" id="cam-lbl">Apunta al QR del carnet del estudiante</div>
-        </div>
-        <button class="cam-btn" id="btn-cam-start" onclick="startCam()">📷 Activar cámara — escanear QR</button>
-        <button class="cam-stop" id="btn-cam-stop" onclick="stopCam()" style="display:none;">⏹ Detener cámara</button>
-      </div>
-
-      <!-- MANUAL -->
-      <div id="m-manual" style="display:none;">
-        <div class="manual-card">
-          <div class="mc-lbl">Ingresa el ID del estudiante</div>
-          <input class="mc-inp" id="manual-id" placeholder="CORP-2025-0001" onkeydown="if(event.key==='Enter')registrarManual()"/>
-          <button class="mc-btn" onclick="registrarManual()">✅ Registrar asistencia</button>
-        </div>
-      </div>
-
-      <!-- RESULTADO -->
+      <!-- Resultado -->
       <div class="result" id="result-box">
-        <div class="r-header">
-          <div class="r-ico" id="r-ico">✅</div>
-          <div>
-            <div class="r-name" id="r-name">—</div>
-            <div class="r-prog" id="r-prog">—</div>
-          </div>
-        </div>
-        <div class="r-rows">
-          <div class="r-row"><span class="rl">ID</span><span class="rv" id="r-id">—</span></div>
-          <div class="r-row"><span class="rl">Hora de ingreso</span><span class="rv" id="r-hora">—</span></div>
-          <div class="r-row"><span class="rl">Clase</span><span class="rv" id="r-clase">—</span></div>
-          <div class="r-row"><span class="rl">Docente</span><span class="rv" id="r-docente">—</span></div>
-          <div class="r-row" id="r-fnx-row" style="display:none;"><span class="rl">Puntualidad</span><span class="rv" id="r-puntualidad">—</span></div>
-          <div class="r-row" id="r-fnx-row2" style="display:none;"><span class="rl">FNX descontados</span><span class="rv" id="r-fnx-val">—</span></div>
-        </div>
-        <button class="wa-btn" id="r-wa" onclick="notificarPadre()" style="display:none;">📱 Notificar padre/madre por WhatsApp</button>
+        <div class="r-name" id="r-name">—</div>
+        <div class="r-row"><span class="rl">Tipo</span><span class="rv" id="r-tipo">—</span></div>
+        <div class="r-row"><span class="rl">Hora registro</span><span class="rv" id="r-hora">—</span></div>
+        <div class="r-row"><span class="rl">Fecha</span><span class="rv" id="r-fecha">—</span></div>
+        <div class="r-row" id="r-prow"><span class="rl">Puntualidad</span><span class="rv" id="r-punt">—</span></div>
+        <div class="r-row" id="r-frow"><span class="rl">FNX descontados</span><span class="rv" id="r-fnx">—</span></div>
+        <div class="r-row"><span class="rl">Ubicación</span><span class="rv mono" id="r-loc">—</span></div>
+        <button class="wa-btn" id="r-wa" style="display:none" onclick="notificarPadreManual()">📱 Notificar padre/madre</button>
       </div>
 
     </div>
   </div>
 
-  <!-- ══ TAB: QR SALÓN ══ -->
-  <div class="tab-content" id="tab-qrsalon">
-    <div class="qrsw">
-      <div class="qrs-card">
-        <div class="qrs-title">🏫 Generar QR fijo del salón</div>
-        <div style="font-size:.73rem;color:var(--muted);margin-bottom:.75rem;line-height:1.65;">El estudiante escanea este QR con su cámara → ingresa su ID → queda registrado automáticamente.</div>
-        <input class="qrs-inp" id="qrs-salon" placeholder="Nombre del salón (ej: Salón 4A — Primaria)"/>
-        <select class="qrs-sel" id="qrs-nivel">
-          <option value="">Nivel / Grupo</option>
-          <option>Preescolar — Transición</option>
-          <option>Básica Primaria — 1°</option><option>Básica Primaria — 2°</option>
-          <option>Básica Primaria — 3°</option><option>Básica Primaria — 4°</option>
-          <option>Básica Primaria — 5°</option>
-          <option>Básica Secundaria — 6°</option><option>Básica Secundaria — 7°</option>
-          <option>Básica Secundaria — 8°</option><option>Básica Secundaria — 9°</option>
-          <option>Media — 10°</option><option>Media — 11°</option>
-          <option>Adultos</option><option>Inglés</option><option>Diplomado</option>
+  <!-- TAB REPORTE -->
+  <div class="tab-content" id="tab-rep">
+    <div class="rep-wrap">
+      <div class="rep-filt">
+        <input class="rep-inp" type="date" id="filt-fecha" onchange="cargarReporte()"/>
+        <input class="rep-inp" id="filt-buscar" placeholder="Buscar nombre o ID..." oninput="filtrarReporte()"/>
+        <select class="rep-inp" id="filt-tipo" onchange="filtrarReporte()" style="max-width:130px;">
+          <option value="">Todos</option>
+          <option value="student">Estudiantes</option>
+          <option value="staff">Personal</option>
         </select>
-        <select class="qrs-sel" id="qrs-materia">
-          <option value="">Materia / Área</option>
-          <option>Matemáticas</option><option>Español</option>
-          <option>Ciencias Naturales</option><option>Ciencias Sociales</option>
-          <option>Inglés</option><option>Educación Física</option>
-          <option>Artes</option><option>Tecnología</option><option>Blockchain</option><option>Otra</option>
-        </select>
-        <button class="qrs-btn" onclick="generarQRSalon()">🖨️ Generar QR del salón</button>
+        <button class="rep-btn" onclick="exportCSV()">⬇️ CSV</button>
       </div>
-      <div id="qr-salon-result" style="display:none;">
-        <div class="qr-print">
-          <div class="qrp-salon" id="qrp-nombre">—</div>
-          <div class="qrp-info" id="qrp-info">—</div>
+      <div class="rep-table">
+        <table>
+          <thead><tr>
+            <th>ID</th><th>Nombre</th><th>Tipo</th>
+            <th>Hora</th><th>Estado</th><th>FNX Δ</th>
+            <th>Lat</th><th>Lng</th>
+            <th id="th-wa" style="display:none">WA</th>
+          </tr></thead>
+          <tbody id="rep-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 2PM (solo admin) -->
+  <div class="tab-content" id="tab-pm">
+    <div class="rep-wrap">
+      <div style="background:var(--dark3);border:1px solid rgba(251,191,36,.2);border-radius:14px;padding:1.25rem;">
+        <div style="font-size:.9rem;font-weight:800;margin-bottom:.5rem;color:var(--amber)">🕑 Proceso de ausencias 2PM</div>
+        <div style="font-size:.72rem;color:var(--muted);line-height:1.7;margin-bottom:1rem;">
+          Este proceso se ejecuta <strong>automáticamente</strong> a las 2:00 PM.<br>
+          Marca como <strong>Ausente (-20 FNX)</strong> a todos los estudiantes activos que no registraron ingreso.<br>
+          Se notifica automáticamente por WhatsApp al número registrado en cada carnet.<br>
+          El personal docente queda en el historial sin descuentos.
+        </div>
+        <button class="lbtn" onclick="ejecutar2PM()" style="width:auto;padding:.6rem 1.5rem;">🚀 Ejecutar proceso manual</button>
+        <div style="margin-top:1rem;font-size:.68rem;color:var(--muted)" id="pm-status">—</div>
+      </div>
+      <div class="rep-table">
+        <table>
+          <thead><tr><th>ID</th><th>Nombre</th><th>Estado aplicado</th><th>FNX antes</th><th>FNX después</th><th>WA enviado</th></tr></thead>
+          <tbody id="pm-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB QR CORPORSEPI -->
+  <div class="tab-content" id="tab-qr">
+    <div class="qr-wrap">
+
+      <!-- Generador -->
+      <div class="qr-card">
+        <div class="qr-card-title">🖨️ Generar QR de asistencia</div>
+        <input class="qr-inp" id="qr-lugar" placeholder="Nombre del lugar (ej: Entrada principal, Salón 4A)"/>
+        <button class="qr-btn" onclick="generarQR()">⚡ Generar QR</button>
+      </div>
+
+      <!-- QR para imprimir (pegar en la pared) -->
+      <div id="qr-print-section" style="display:none">
+        <div class="qr-print-wrap" id="qr-print-content">
+          <div class="qrp-logo">🦅</div>
+          <div class="qrp-inst">Corporación de Servicios Educativos Pensamiento e Innovación</div>
+          <div class="qrp-title">📋 REGISTRO DE ASISTENCIA</div>
+          <div class="qrp-sub" id="qrp-lugar-text">—</div>
           <div class="qrp-qr"><div id="qrp-code"></div></div>
-          <div class="qrp-url" id="qrp-url">—</div>
-          <div class="qrp-note">Imprime y pega en la puerta del salón · corposepi.org</div>
-        </div>
-        <button class="print-btn" onclick="window.print()">🖨️ Imprimir QR</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ══ TAB: REPORTE ══ -->
-  <div class="tab-content" id="tab-reporte">
-    <div class="rw">
-      <div class="rf">
-        <div class="rf-grid">
-          <input class="rf-inp" id="rf-fecha" type="date"/>
-          <input class="rf-inp" id="rf-buscar" placeholder="🔍 Buscar nombre o ID..."/>
-        </div>
-        <button class="rf-btn" onclick="cargarReporte(currentReportType)">📊 Generar reporte</button>
-      </div>
-
-      <div class="stats-row">
-        <div class="st"><div class="st-v" id="st-est" style="color:var(--blue)">0</div><div class="st-l">Estudiantes</div></div>
-        <div class="st"><div class="st-v" id="st-doc" style="color:var(--gold)">0</div><div class="st-l">Docentes</div></div>
-        <div class="st"><div class="st-v" id="st-pres" style="color:var(--green)">0</div><div class="st-l">Presentes</div></div>
-        <div class="st"><div class="st-v" id="st-total" style="color:var(--corp3)">0</div><div class="st-l">Total</div></div>
-      </div>
-
-      <div class="rep-tbl">
-        <div class="rep-head">
-          <div class="rep-ttl" id="rep-ttl">Registros del día</div>
-          <div style="display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;">
-            <div class="rep-type-tabs">
-              <button class="rtt active" onclick="cargarReporte('estudiantes',this)">🎓 Estudiantes</button>
-              <button class="rtt" onclick="cargarReporte('docentes',this)">👩‍🏫 Docentes</button>
-            </div>
-            <button class="rep-exp" onclick="exportarCSV()">📥 CSV</button>
-            <button class="rep-exp" style="border-color:rgba(248,113,113,.4);color:var(--red);" onclick="confirmarAusencias()">❌ Aplicar ausencias</button>
+          <div class="qrp-steps">
+            <div class="qrp-step">1️⃣ Abre la cámara de tu celular</div>
+            <div class="qrp-step">2️⃣ Apunta al QR hasta que aparezca el enlace</div>
+            <div class="qrp-step">3️⃣ Tócalo → ingresa tu ID CORPOSEPI</div>
+            <div class="qrp-step">4️⃣ ¡Listo! Tu asistencia queda registrada ✅</div>
           </div>
+          <div class="qrp-url" id="qrp-url-text">—</div>
+          <div class="qrp-footer">NIT 901898846-6 · corposepi.org · 📞 3208331239</div>
         </div>
-        <div style="overflow-x:auto;">
-          <table id="rep-table">
-            <thead id="rep-thead"></thead>
-            <tbody id="rep-body"></tbody>
-          </table>
+        <div style="display:flex;gap:.5rem;margin-top:.75rem;">
+          <button class="qr-btn" onclick="imprimirQR()" style="flex:1">🖨️ Imprimir / Guardar PDF</button>
+          <button class="qr-btn-sec" onclick="mostrarPantalla()" style="flex:1">📱 Mostrar en pantalla grande</button>
         </div>
+        <button class="qr-btn-sec" onclick="compartirQR()" style="margin-top:.5rem">📤 Compartir enlace por WhatsApp</button>
       </div>
+
+      <!-- QR pantalla grande (el profe muestra y estudiantes escanean) -->
+      <div class="qr-screen-wrap" id="qr-screen">
+        <div class="qrs-title-big">📋 Escanea para registrar asistencia</div>
+        <div class="qrs-sub" id="qrs-lugar-big">—</div>
+        <div class="qrs-qr-big"><div id="qrs-code-big"></div></div>
+        <div class="qrs-instruction">📱 Apunta tu cámara al QR · ingresa tu ID · ¡listo!</div>
+        <button class="qrs-close" onclick="cerrarPantalla()">✕ Cerrar pantalla grande</button>
+      </div>
+
     </div>
   </div>
 
-</div><!-- /app -->
-
-<!-- SALON LANDING (se reemplaza el body si viene de QR salón) -->
+</div>
 
 <div class="toast" id="toast"></div>
 
@@ -503,543 +370,772 @@ const FB_CONFIG = {
   projectId: "corposepi-carnets",
   storageBucket: "corposepi-carnets.appspot.com"
 };
-const BASE_CARNETS = 'https://beamish-squirrel-43c7b7.netlify.app';
-const BASE_APP = window.location.origin + window.location.pathname.replace('index.html','');
-const PASS_DOCENTE = ['DocentesCorposepi@#@2026','DocentesCorposepi@#@2026'];
-const PASS_ADMIN = ['Deperavi1973@#@2026','Deperavi1973@#@2026'];
+const BASE_CARNETS = 'https://corposepi.github.io/corposepi-carnets';
+const PASS_ADMIN   = 'Deperavi1973@#@2026';
 
 let db = null;
-let userNombre = '';
-let userCargo = '';
-let userRole = ''; // 'docente' | 'admin'
-let scanActive = false;
-let videoStream = null;
-let scanInterval = null;
-let lastQR = '';
-let lastQRTime = 0;
+let userNombre = '', userCargo = '', userRole = '', userObj = null;
+let scanActive = false, camStream = null, scanInterval = null;
+let geoLat = null, geoLng = null, geoAcc = null;
 let currentResult = null;
-let currentReportType = 'estudiantes';
+let reporteData = [];
 
-// ══ INIT ══
-(function(){
-  // Check if salon QR scan
-  const p = new URLSearchParams(window.location.search);
-  if(p.get('salon')){ showSalonPage(p); return; }
-  // Init Firebase
-  try{ if(!firebase.apps.length) firebase.initializeApp(FB_CONFIG); db=firebase.database(); }catch(e){ console.warn(e); }
-  // Clock
-  setInterval(()=>{ const el=document.getElementById('tb-clock'); if(el)el.textContent=new Date().toLocaleTimeString('es-CO'); },1000);
-  document.getElementById('rf-fecha').value = new Date().toISOString().slice(0,10);
-})();
+// ══ FIREBASE ══
+try{
+  if(!firebase.apps.length) firebase.initializeApp(FB_CONFIG);
+  db = firebase.database();
+}catch(e){ console.warn('Firebase:', e); }
 
-// ══ SALON QR PAGE ══
-function showSalonPage(p){
-  const salon = decodeURIComponent(p.get('salon')||'Salón');
-  const nivel = decodeURIComponent(p.get('nivel')||'');
-  const materia = decodeURIComponent(p.get('materia')||'');
-  const docente = decodeURIComponent(p.get('docente')||'');
-  try{ if(!firebase.apps.length) firebase.initializeApp(FB_CONFIG); db=firebase.database(); }catch(e){}
-
-  document.body.innerHTML=`
-  <div style="min-height:100vh;background:#0a0a0a;display:flex;align-items:center;justify-content:center;padding:1rem;font-family:'Montserrat',sans-serif;">
-    <div style="background:#161616;border:1px solid #2a2a2a;border-radius:20px;padding:2rem;max-width:380px;width:100%;text-align:center;">
-      <div style="font-size:2rem;margin-bottom:.4rem">🏫</div>
-      <div style="font-size:1rem;font-weight:800;color:#fff;margin-bottom:.15rem">${salon}</div>
-      <div style="font-size:.7rem;color:#888;margin-bottom:1.25rem">${nivel} · ${materia}${docente?' · '+docente:''}</div>
-      <div style="font-size:.78rem;color:#ccc;margin-bottom:1rem;line-height:1.7">Ingresa tu ID CORPOSEPI para registrar tu asistencia</div>
-      <input id="s-id" style="width:100%;background:#222;border:1px solid #444;border-radius:10px;padding:.75rem 1rem;color:#fff;font-family:monospace;font-size:1rem;outline:none;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem;text-align:center;" placeholder="CORP-2025-0001" autofocus onkeydown="if(event.key==='Enter')salonRegistrar('${encodeURIComponent(salon)}','${encodeURIComponent(nivel)}','${encodeURIComponent(materia)}','${encodeURIComponent(docente)}')"/>
-      <button onclick="salonRegistrar('${encodeURIComponent(salon)}','${encodeURIComponent(nivel)}','${encodeURIComponent(materia)}','${encodeURIComponent(docente)}')" style="width:100%;background:linear-gradient(135deg,#B8410A,#E8651A);border:none;border-radius:10px;padding:.85rem;color:#fff;font-family:'Montserrat',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;">✅ Registrar mi asistencia</button>
-      <div id="s-result" style="margin-top:1rem;"></div>
-      <div style="font-size:.6rem;color:#333;margin-top:1.5rem;line-height:1.8;">📞 3208331239 · corposepi.org · NIT 901898846-6</div>
-    </div>
-  </div>`;
-}
-
-async function salonRegistrar(salon,nivel,materia,docente){
-  const id=document.getElementById('s-id').value.trim().toUpperCase();
-  if(!id){ return; }
-  const res = await registrarAsistencia(id, decodeURIComponent(nivel), decodeURIComponent(materia), decodeURIComponent(docente)||'QR Salón', 'student');
-  const el=document.getElementById('s-result');
-  if(res.ok){
-    el.innerHTML=`<div style="background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.3);border-radius:12px;padding:1rem;">
-      <div style="color:#4ade80;font-weight:800;font-size:.9rem">✅ ¡Asistencia registrada!</div>
-      <div style="color:#ccc;font-size:.75rem;margin-top:.3rem">${res.nombre}</div>
-      <div style="color:#888;font-size:.68rem;margin-top:.15rem">${new Date().toLocaleTimeString('es-CO')}</div>
-    </div>`;
-    document.getElementById('s-id').value='';
-  } else {
-    el.innerHTML=`<div style="background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);border-radius:12px;padding:.75rem;color:#f87171;font-size:.8rem;">${res.error}</div>`;
-  }
+// ══ GEOLOCALIZACIÓN ══
+function iniciarGeo(){
+  const dot = document.getElementById('loc-dot');
+  const txt = document.getElementById('loc-txt');
+  if(!navigator.geolocation){ txt.textContent='Sin GPS disponible'; dot.className='loc-dot err'; return; }
+  navigator.geolocation.watchPosition(
+    pos=>{
+      geoLat = pos.coords.latitude.toFixed(6);
+      geoLng = pos.coords.longitude.toFixed(6);
+      geoAcc = Math.round(pos.coords.accuracy);
+      dot.className='loc-dot ok';
+      txt.textContent=`📍 ${geoLat}, ${geoLng}  ±${geoAcc}m`;
+    },
+    err=>{ dot.className='loc-dot err'; txt.textContent='GPS no disponible · '+err.message; },
+    {enableHighAccuracy:true, maximumAge:10000, timeout:15000}
+  );
 }
 
 // ══ LOGIN ══
-function switchLoginRole(role,el){
-  document.querySelectorAll('.rt').forEach(t=>{t.className='rt';});
-  el.classList.add(role==='docente'?'active-doc':'active-adm');
-  document.getElementById('lf-docente').style.display=role==='docente'?'block':'none';
-  document.getElementById('lf-admin').style.display=role==='admin'?'block':'none';
-}
-
-async function loginDocente(){
-  const nombre=document.getElementById('doc-nombre').value.trim();
-  const cargo=document.getElementById('doc-cargo').value;
-  const pass=document.getElementById('doc-pass').value;
-  if(!nombre){showToast('⚠️ Ingresa tu nombre');return;}
-  if(!cargo){showToast('⚠️ Selecciona tu cargo');return;}
-  if(!PASS_DOCENTE.includes(pass)){document.getElementById('err-docente').classList.add('show');setTimeout(()=>document.getElementById('err-docente').classList.remove('show'),3000);return;}
-  userNombre=nombre; userCargo=cargo; userRole='docente';
-  // Registrar ingreso del docente
-  const horaIngreso = await registrarIngresoDocente(nombre, cargo);
-  startApp();
-  // Show banner
-  document.getElementById('doc-banner').style.display='flex';
-  document.getElementById('doc-cargo-banner').textContent=cargo;
-  document.getElementById('doc-hora-banner').textContent=horaIngreso;
-  showToast('✅ Ingreso registrado · '+horaIngreso);
+function switchTab(t, el){
+  document.querySelectorAll('.ltab').forEach(x=>x.classList.remove('active'));
+  el.classList.add('active');
+  ['adm','doc','est'].forEach(id=>document.getElementById('lf-'+id).style.display='none');
+  document.getElementById('lf-'+t).style.display='flex';
 }
 
 function loginAdmin(){
-  const pass=document.getElementById('adm-pass').value;
-  if(!PASS_ADMIN.includes(pass)){document.getElementById('err-admin').classList.add('show');setTimeout(()=>document.getElementById('err-admin').classList.remove('show'),3000);return;}
-  userNombre='Administrador'; userCargo='Administrador'; userRole='admin';
-  startApp();
+  const p = document.getElementById('adm-pass').value;
+  const err = document.getElementById('err-adm');
+  if(p !== PASS_ADMIN){ err.classList.add('show'); return; }
+  err.classList.remove('show');
+  userRole='admin'; userNombre='Administrador'; userCargo='Administrador';
+  iniciarApp();
 }
 
-async function registrarIngresoDocente(nombre, cargo){
-  const ahora = new Date();
-  const hoy = ahora.toISOString().slice(0,10);
-  const hora = ahora.toLocaleTimeString('es-CO');
-  const key = nombre.replace(/[^a-z0-9]/gi,'-').toLowerCase()+'-'+hoy;
-  const registro = { nombre, cargo, fecha:hoy, hora, timestamp:ahora.toISOString(), tipo:'ingreso_docente' };
-  try{ if(db) await db.ref(`docentes/${hoy}/${key}`).set(registro); }catch(e){}
-  return hora;
+async function loginDocente(){
+  const id  = document.getElementById('doc-id').value.trim().toUpperCase();
+  const doc = document.getElementById('doc-ndoc').value.trim();
+  const err = document.getElementById('err-doc');
+  if(!id||!doc){ err.textContent='Ingresa ID y documento.'; err.classList.add('show'); return; }
+  if(!db){ err.textContent='Sin conexión.'; err.classList.add('show'); return; }
+  const snap = await db.ref('corposepi/staff').once('value');
+  const staff = snap.val()||[];
+  const s = staff.find(x=>x&&x.id===id&&x.numdoc===doc&&x.status!=='blocked');
+  if(!s){ err.textContent='ID o documento incorrecto.'; err.classList.add('show'); return; }
+  err.classList.remove('show');
+  userRole='docente'; userNombre=s.nombres+' '+s.apellidos; userCargo=s.cargo||'Docente'; userObj=s;
+  // Registrar ingreso del docente (solo historial, sin FNX, sin WA)
+  registrarIngreso(s.id, 'staff', userNombre, null);
+  iniciarApp();
 }
 
-function startApp(){
-  document.getElementById('login').style.display='none';
+async function loginEstudiante(){
+  const id  = document.getElementById('est-id').value.trim().toUpperCase();
+  const doc = document.getElementById('est-ndoc').value.trim();
+  const err = document.getElementById('err-est');
+  if(!id||!doc){ err.textContent='Ingresa ID y documento.'; err.classList.add('show'); return; }
+  if(!db){ err.textContent='Sin conexión.'; err.classList.add('show'); return; }
+  const snap = await db.ref('corposepi/students').once('value');
+  const students = snap.val()||[];
+  const s = students.find(x=>x&&x.id===id&&x.numdoc===doc);
+  if(!s){ err.textContent='ID o documento incorrecto.'; err.classList.add('show'); return; }
+  if(s.status==='blocked'){ err.textContent='Carnet bloqueado. Contacta administración.'; err.classList.add('show'); return; }
+  err.classList.remove('show');
+  userRole='estudiante'; userNombre=s.nombres+' '+s.apellidos; userObj=s;
+  // Auto-registrar ingreso
+  const res = await registrarIngreso(s.id, 'student', userNombre, s.cel||null);
+  iniciarApp(res);
+}
+
+function iniciarApp(resEstudiante){
+  document.getElementById('login-screen').style.display='none';
   document.getElementById('app').style.display='flex';
-  document.getElementById('tb-user').textContent=userNombre;
-  document.getElementById('tb-clock').textContent=new Date().toLocaleTimeString('es-CO');
-  const badge=document.getElementById('tb-badge');
-  badge.textContent=userCargo;
-  badge.className='tb-badge '+(userRole==='admin'?'tbb-adm':'tbb-doc');
+  document.getElementById('tb-user').textContent = userNombre;
+  const badge = document.getElementById('tb-badge');
+  if(userRole==='admin'){ badge.textContent='Admin'; badge.className='tb-badge tbb-adm'; }
+  else if(userRole==='docente'){ badge.textContent='Docente'; badge.className='tb-badge tbb-doc'; }
+  else { badge.textContent='Estudiante'; badge.className='tb-badge tbb-est'; }
 
-  // Build tabs based on role
-  const tabsEl=document.getElementById('app-tabs');
-  tabsEl.innerHTML=`
-    <div class="tab active" onclick="switchTab('escanear',this)">📷 Escanear</div>
-    <div class="tab" onclick="switchTab('qrsalon',this)">🏫 QR Salón</div>
-    <div class="tab" onclick="switchTab('reporte',this)">📊 Reporte</div>
-  `;
-  // Set clase selects with docente name
-  cargarReporte('estudiantes', document.querySelector('.rtt'));
-}
+  // Tabs según rol
+  const tabPM = document.getElementById('tab-btn-pm');
+  const tabQR = document.getElementById('tab-btn-qr');
+  if(userRole==='admin'){ tabPM.style.display='block'; tabQR.style.display='block'; }
+  else if(userRole==='docente'){ tabQR.style.display='block'; tabPM.style.display='none'; }
+  else { tabPM.style.display='none'; tabQR.style.display='none'; }
 
-// ══ TABS ══
-function switchTab(id,el){
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
-  el.classList.add('active');
-  document.getElementById('tab-'+id).classList.add('active');
-  if(id!=='escanear') stopCam();
-}
-
-// ══ SCANNER MODE ══
-function setMode(mode,el){
-  document.querySelectorAll('.mt').forEach(t=>t.classList.remove('active'));
-  el.classList.add('active');
-  document.getElementById('m-camara').style.display=mode==='camara'?'block':'none';
-  document.getElementById('m-manual').style.display=mode==='manual'?'block':'none';
-  if(mode!=='camara') stopCam();
-}
-
-// ══ CAMERA ══
-async function startCam(){
-  const nivel=document.getElementById('cl-nivel').value;
-  const materia=document.getElementById('cl-materia').value;
-  if(!nivel||!materia){showToast('⚠️ Selecciona nivel y materia primero');return;}
-  try{
-    videoStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}}});
-    const vid=document.getElementById('cam-vid');
-    vid.srcObject=videoStream;
-    document.getElementById('cam-box').style.display='block';
-    document.getElementById('btn-cam-start').style.display='none';
-    document.getElementById('btn-cam-stop').style.display='block';
-    scanActive=true;
-    vid.addEventListener('loadedmetadata',()=>{ scanInterval=setInterval(scanFrame,250); });
-    showToast('📷 Cámara activa');
-  }catch(e){ showToast('⚠️ No se pudo acceder a la cámara'); }
-}
-
-function stopCam(){
-  scanActive=false; clearInterval(scanInterval);
-  if(videoStream){videoStream.getTracks().forEach(t=>t.stop());videoStream=null;}
-  const box=document.getElementById('cam-box');
-  if(box)box.style.display='none';
-  const s=document.getElementById('btn-cam-start');
-  const st=document.getElementById('btn-cam-stop');
-  if(s)s.style.display='flex';
-  if(st)st.style.display='none';
-}
-
-function scanFrame(){
-  if(!scanActive)return;
-  const vid=document.getElementById('cam-vid');
-  const cvs=document.getElementById('cam-cvs');
-  if(vid.readyState!==vid.HAVE_ENOUGH_DATA)return;
-  cvs.width=vid.videoWidth; cvs.height=vid.videoHeight;
-  const ctx=cvs.getContext('2d');
-  ctx.drawImage(vid,0,0,cvs.width,cvs.height);
-  const img=ctx.getImageData(0,0,cvs.width,cvs.height);
-  const code=jsQR(img.data,img.width,img.height,{inversionAttempts:'dontInvert'});
-  if(code){
-    const now=Date.now();
-    if(code.data===lastQR&&now-lastQRTime<4000)return;
-    lastQR=code.data; lastQRTime=now;
-    procesarQR(code.data);
+  // El estudiante solo ve su resultado, no puede escanear a otros
+  if(userRole==='estudiante'){
+    document.getElementById('tab-btn-scan').style.display='none';
+    document.getElementById('tab-btn-rep').style.display='none';
+    if(resEstudiante) mostrarResultado(resEstudiante);
+    document.getElementById('app').style.overflow='auto';
+    document.getElementById('tab-scan').style.display='flex';
+    document.getElementById('tab-scan').classList.add('active');
+    document.querySelector('.cam-box').style.display='none';
+    document.getElementById('btn-cam').style.display='none';
+    document.querySelector('.manual-card').style.display='none';
+    document.querySelector('.loc-bar').style.display='none';
   }
+
+  iniciarGeo();
+  verificar2PM();
+  setInterval(verificar2PM, 60000);
+
+  // Cargar reporte del día
+  const hoy = new Date().toISOString().slice(0,10);
+  document.getElementById('filt-fecha').value = hoy;
+  if(userRole==='admin'){ cargarReporte(); }
+
+  // Mostrar WA en reporte solo para admin
+  if(userRole==='admin') document.getElementById('th-wa').style.display='';
 }
 
-function procesarQR(data){
-  let id=data;
-  if(data.includes('?id=')) id=data.split('?id=')[1].split('&')[0].trim().toUpperCase();
-  else id=data.trim().toUpperCase();
-  if(!id.startsWith('CORP-')){showToast('⚠️ QR no reconocido como carnet CORPOSEPI');return;}
-  const nivel=document.getElementById('cl-nivel').value;
-  const materia=document.getElementById('cl-materia').value;
-  registrarAsistencia(id,nivel,materia,userNombre,'student').then(res=>{
-    mostrarResultado(res);
-    if(res.ok) stopCam();
-  });
+function logout(){
+  if(camStream){ camStream.getTracks().forEach(t=>t.stop()); scanActive=false; }
+  location.reload();
 }
 
-// ══ MANUAL ══
-function registrarManual(){
-  const id=document.getElementById('manual-id').value.trim().toUpperCase();
-  if(!id){showToast('⚠️ Ingresa un ID');return;}
-  const nivel=document.getElementById('cl-nivel').value;
-  const materia=document.getElementById('cl-materia').value;
-  if(!nivel||!materia){showToast('⚠️ Selecciona nivel y materia');return;}
-  registrarAsistencia(id,nivel,materia,userNombre,'student').then(res=>{
-    mostrarResultado(res);
-    document.getElementById('manual-id').value='';
-  });
+function showTab(t, el){
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.tab-content').forEach(x=>x.classList.remove('active'));
+  document.getElementById('tab-'+t).classList.add('active');
+  if(t==='rep') cargarReporte();
 }
 
-// ══ REGLAS DE PUNTUALIDAD FNX ══
-// 08:00 — hora de entrada
-// 08:01–08:10 — A tiempo (0 descuento)
-// 08:11–09:00 — Tardanza leve (-5 FNX)
-// 09:01–10:40 — Tardanza moderada (-10 FNX)
-// 10:41+ — Tardanza grave (-20 FNX)
-// Sin registro — Ausencia (-20 FNX, se aplica al final del día por admin)
-
-function calcularPenalidadFNX(ahora){
-  const h=ahora.getHours();
-  const m=ahora.getMinutes();
-  const totalMin=h*60+m;
-  const entrada=8*60;      // 08:00
-  const t1=8*60+10;        // 08:10
-  const t2=9*60;           // 09:00
-  const t3=10*60+40;       // 10:40
-
-  if(totalMin<=t1) return {penalidad:0, estado:'P', etiqueta:'✅ A tiempo', color:'#4ade80'};
-  if(totalMin<=t2) return {penalidad:5, estado:'T1', etiqueta:'⏰ Tardanza leve (-5 FNX)', color:'#fbbf24'};
-  if(totalMin<=t3) return {penalidad:10, estado:'T2', etiqueta:'⏰ Tardanza moderada (-10 FNX)', color:'#fb923c'};
-  return {penalidad:20, estado:'T3', etiqueta:'🔴 Tardanza grave (-20 FNX)', color:'#f87171'};
+// ══ GEOLOCALIZACIÓN — captura instantánea ══
+function getGeo(){
+  return {lat: geoLat, lng: geoLng, acc: geoAcc};
 }
 
-// ══ CORE: REGISTRAR ASISTENCIA (solo 1 vez por día) ══
-async function registrarAsistencia(id, nivel, materia, docente, tipo){
+// ══ REGLAS FNX PUNTUALIDAD ══
+// Hasta 8:10       → A tiempo       (0 FNX)
+// 8:11 – 10:40     → Tardanza       (-30 FNX)
+// 10:41 – 14:00    → Tardanza grave (-75 FNX)
+// Sin registro 2pm → Ausente        (-75 FNX)
+function calcularPena(fecha){
+  const m = fecha.getHours()*60 + fecha.getMinutes();
+  if(m <= 8*60+10) return {penalidad:0,  etiqueta:'✅ A tiempo',              estado:'P',  color:'#4ade80'};
+  if(m <= 10*60+40)return {penalidad:30, etiqueta:'🟠 Tardanza (-30 FNX)',     estado:'T',  color:'#f97316'};
+                   return {penalidad:75, etiqueta:'🔴 Tardanza grave (-75 FNX)',estado:'TG', color:'#f87171'};
+}
+
+// ══ REGISTRO DE INGRESO (estudiante o staff) ══
+async function registrarIngreso(id, tipo, nombre, cel){
   try{
-    // 1. Buscar en Firebase
-    let estudiante=null;
-    let estudianteIdx=-1;
-    if(db){
-      const snap=await db.ref('corposepi').once('value');
-      const data=snap.val();
-      if(data){
-        const all=[...(data.students||[]),...(data.staff||[])];
-        estudiante=all.find(s=>s.id===id);
-        estudianteIdx=(data.students||[]).findIndex(s=>s.id===id);
-      }
-    }
-    if(!estudiante) return {ok:false,error:'❌ ID '+id+' no encontrado en CORPOSEPI'};
-    if(estudiante.status==='blocked') return {ok:false,error:'🚫 Carnet bloqueado — contactar administración'};
+    const ahora = new Date();
+    const hoy   = ahora.toISOString().slice(0,10);
+    const hora  = ahora.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
+    const safeId= id.replace(/[^a-z0-9]/gi,'-');
+    const geo   = getGeo();
 
-    // 2. Verificar UNA SOLA VEZ POR DÍA
-    const ahora=new Date();
-    const hoy=ahora.toISOString().slice(0,10);
-    const safeId=id.replace(/[^a-z0-9]/gi,'-');
     if(db){
-      const yaSnap=await db.ref(`asistencia/${hoy}/${safeId}`).once('value');
+      // Verificar si ya registró hoy
+      const yaSnap = await db.ref(`asistencia/${hoy}/${safeId}`).once('value');
       if(yaSnap.val()){
-        const prev=yaSnap.val();
-        return {ok:false, dup:true, error:`⚠️ ${estudiante.nombres} ${estudiante.apellidos} ya registró ingreso hoy a las ${prev.hora}`};
+        const prev = yaSnap.val();
+        return {ok:false, dup:true, nombre, hora:prev.hora,
+                error:`⚠️ ${nombre} ya registró hoy a las ${prev.hora}`};
       }
     }
 
-    // 3. Calcular penalidad FNX por puntualidad
-    const pena=calcularPenalidadFNX(ahora);
-    const fnxActual=parseFloat(estudiante.fnx||0);
-    const fnxNuevo=Math.max(0, fnxActual-pena.penalidad); // no puede quedar negativo
+    let pena = {penalidad:0, etiqueta:'—', estado:'P', color:'#4ade80'};
+    let fnxNuevo = null;
+    let fnxActual = null;
 
-    // 4. Guardar registro de asistencia
-    const hora=ahora.toLocaleTimeString('es-CO');
-    const reg={
-      id, tipo:'student',
-      estudiante:`${estudiante.nombres} ${estudiante.apellidos}`,
-      nivel:estudiante.nivel||nivel, materia, docente,
-      fecha:hoy, hora, timestamp:ahora.toISOString(),
-      estado:pena.estado,
-      penalidad_fnx:pena.penalidad,
-      fnx_antes:fnxActual,
-      fnx_despues:fnxNuevo,
-      etiqueta_puntualidad:pena.etiqueta,
-      cel:estudiante.cel||''
+    if(tipo==='student'){
+      // Buscar FNX actual
+      const snap = await db.ref('corposepi/students').once('value');
+      const students = snap.val()||[];
+      const idx = students.findIndex(s=>s&&s.id===id);
+      if(idx>=0){
+        fnxActual = parseFloat(students[idx].fnx||0);
+        pena = calcularPena(ahora);
+        fnxNuevo = Math.max(0, fnxActual - pena.penalidad);
+        if(pena.penalidad>0)
+          await db.ref(`corposepi/students/${idx}/fnx`).set(fnxNuevo.toFixed(2));
+      }
+    }
+
+    const reg = {
+      id, tipo, nombre,
+      fecha:hoy, hora,
+      timestamp: ahora.toISOString(),
+      estado: tipo==='staff'?'DOC':pena.estado,
+      penalidad_fnx: tipo==='staff'?0:pena.penalidad,
+      fnx_antes: fnxActual,
+      fnx_despues: fnxNuevo,
+      etiqueta: tipo==='staff'?'👩‍🏫 Docente/Personal':pena.etiqueta,
+      cel: cel||'',
+      lat: geo.lat||'',
+      lng: geo.lng||'',
+      acc: geo.acc||''
     };
-    if(db){
-      await db.ref(`asistencia/${hoy}/${safeId}`).set(reg);
-      // Actualizar FNX del estudiante si hay penalidad
-      if(pena.penalidad>0 && estudianteIdx>=0){
-        await db.ref(`corposepi/students/${estudianteIdx}/fnx`).set(fnxNuevo.toFixed(2));
-      }
+
+    if(db) await db.ref(`asistencia/${hoy}/${safeId}`).set(reg);
+
+    // Notificar WA automático solo para estudiantes
+    if(tipo==='student' && cel && cel.length>=10){
+      const celNum = cel.replace(/\D/g,'');
+      const puntMsg = pena.penalidad>0
+        ? `\n⚠️ *Puntualidad:* ${pena.etiqueta}\n🔥 FNX descontados: -${pena.penalidad} (saldo: ${fnxNuevo.toFixed(0)} FNX)`
+        : `\n✅ Llegó a tiempo · Sin descuento FNX`;
+      const locMsg = geo.lat ? `\n📍 Ubicación: ${geo.lat}, ${geo.lng}` : '';
+      const msg = encodeURIComponent(
+        `🏫 *CORPOSEPI*\n\n`+
+        `📋 *Registro de ingreso*\n\n`+
+        `👤 ${nombre}\n`+
+        `🕐 Hora: ${hora}\n`+
+        `📅 Fecha: ${hoy}`+
+        puntMsg+locMsg+`\n\n`+
+        `📞 3208331239 · corposepi.org`
+      );
+      setTimeout(()=>window.open(`https://wa.me/57${celNum}?text=${msg}`,'_blank'), 700);
     }
 
-    return {ok:true, reg, estudiante, nombre:`${estudiante.nombres} ${estudiante.apellidos}`, pena, fnxNuevo};
+    return {ok:true, reg, pena, fnxNuevo, nombre};
   }catch(e){ return {ok:false, error:'⚠️ Error: '+e.message}; }
-}
-
-// ══ AUSENCIAS MASIVAS (admin aplica al final del día) ══
-async function aplicarAusencias(){
-  const hoy=new Date().toISOString().slice(0,10);
-  let count=0;
-  try{
-    const snapCarnets=await db.ref('corposepi').once('value');
-    const data=snapCarnets.val();
-    if(!data||!data.students) return 0;
-    const snapAsist=await db.ref(`asistencia/${hoy}`).once('value');
-    const asistidos={};
-    snapAsist.forEach(c=>{ asistidos[c.val().id]=true; });
-    for(let i=0;i<data.students.length;i++){
-      const s=data.students[i];
-      if(s.status!=='active') continue;
-      if(asistidos[s.id]) continue; // ya registró
-      // Aplicar -20 FNX por ausencia
-      const fnxActual=parseFloat(s.fnx||0);
-      const fnxNuevo=Math.max(0,fnxActual-20);
-      await db.ref(`corposepi/students/${i}/fnx`).set(fnxNuevo.toFixed(2));
-      // Registrar ausencia
-      const safeId=s.id.replace(/[^a-z0-9]/gi,'-');
-      await db.ref(`asistencia/${hoy}/${safeId}`).set({
-        id:s.id, tipo:'student',
-        estudiante:`${s.nombres} ${s.apellidos}`,
-        nivel:s.nivel||'—', materia:'—', docente:'Sistema',
-        fecha:hoy, hora:'—', timestamp:new Date().toISOString(),
-        estado:'A', penalidad_fnx:20,
-        fnx_antes:fnxActual, fnx_despues:fnxNuevo,
-        etiqueta_puntualidad:'❌ Ausente (-20 FNX)',
-        cel:s.cel||''
-      });
-      count++;
-    }
-    return count;
-  }catch(e){console.error(e);return 0;}
 }
 
 // ══ MOSTRAR RESULTADO ══
 function mostrarResultado(res){
-  const box=document.getElementById('result-box');
-  box.style.display='block';
-  box.className='result';
+  const box = document.getElementById('result-box');
+  box.style.display = 'block';
+  box.className = 'result';
+  currentResult = res;
+
   if(res.ok){
-    box.classList.add('r-ok');
-    document.getElementById('r-ico').textContent='✅';
-    document.getElementById('r-name').textContent=res.nombre;
-    document.getElementById('r-prog').textContent=(res.reg.nivel||'—')+' · '+(res.reg.materia||'—');
-    document.getElementById('r-id').textContent=res.reg.id;
-    document.getElementById('r-hora').textContent=res.reg.hora;
-    document.getElementById('r-clase').textContent=res.reg.materia;
-    document.getElementById('r-docente').textContent=res.reg.docente;
-    // Show FNX penalty
-    const fnxRow=document.getElementById('r-fnx-row'); const fnxRow2=document.getElementById('r-fnx-row2'); if(fnxRow2)fnxRow2.style.display='flex';
-    if(fnxRow){
-      if(res.pena && res.pena.penalidad>0){
-        fnxRow.style.display='flex';
-        document.getElementById('r-fnx-val').textContent='-'+res.pena.penalidad+' FNX → '+res.fnxNuevo.toFixed(2)+' FNX';
-        document.getElementById('r-fnx-val').style.color=res.pena.color;
-        document.getElementById('r-puntualidad').textContent=res.pena.etiqueta;
-        document.getElementById('r-puntualidad').style.color=res.pena.color;
-      } else {
-        fnxRow.style.display='flex';
-        document.getElementById('r-fnx-val').textContent='Sin descuento · '+res.fnxNuevo.toFixed(2)+' FNX';
-        document.getElementById('r-fnx-val').style.color='#4ade80';
-        document.getElementById('r-puntualidad').textContent='✅ A tiempo';
-        document.getElementById('r-puntualidad').style.color='#4ade80';
-      }
+    box.classList.add('ok-box');
+    document.getElementById('r-name').textContent = res.nombre;
+    document.getElementById('r-tipo').textContent  = res.reg.tipo==='staff'?'👩‍🏫 Personal':'🎓 Estudiante';
+    document.getElementById('r-hora').textContent  = res.reg.hora;
+    document.getElementById('r-fecha').textContent = res.reg.fecha;
+    document.getElementById('r-loc').textContent   = res.reg.lat ? `${res.reg.lat}, ${res.reg.lng}` : 'Sin GPS';
+
+    if(res.reg.tipo==='student'){
+      document.getElementById('r-prow').style.display='flex';
+      document.getElementById('r-frow').style.display='flex';
+      const pEl = document.getElementById('r-punt');
+      pEl.textContent = res.pena.etiqueta;
+      pEl.className   = 'rv '+(res.pena.penalidad===0?'ok':res.pena.penalidad<=5?'warn':'bad');
+      document.getElementById('r-fnx').textContent = res.pena.penalidad>0?`-${res.pena.penalidad} FNX → ${res.fnxNuevo.toFixed(0)} FNX`:'0 FNX';
+      if(res.reg.cel && userRole!=='estudiante')
+        document.getElementById('r-wa').style.display='block';
+    } else {
+      document.getElementById('r-prow').style.display='none';
+      document.getElementById('r-frow').style.display='none';
+      document.getElementById('r-wa').style.display='none';
     }
-    const waBtn=document.getElementById('r-wa');
-    waBtn.style.display=res.estudiante.cel?'flex':'none';
-    currentResult=res;
-    showToast('✅ '+res.nombre+' — '+(res.pena&&res.pena.penalidad>0?res.pena.etiqueta:'A tiempo'));
-    box.scrollIntoView({behavior:'smooth',block:'nearest'});
-  }else{
-    box.classList.add(res.dup?'r-dup':'r-err');
-    document.getElementById('r-ico').textContent=res.dup?'⚠️':'❌';
-    document.getElementById('r-name').textContent=res.error;
-    document.getElementById('r-prog').textContent='';
-    document.getElementById('r-id').textContent='—';
-    document.getElementById('r-hora').textContent='—';
-    document.getElementById('r-clase').textContent='—';
-    document.getElementById('r-docente').textContent='—';
+    showToast('✅ '+res.nombre+' · '+res.reg.hora);
+  } else if(res.dup){
+    box.classList.add('dup-box');
+    document.getElementById('r-name').textContent = '⚠️ Ya registrado';
+    document.getElementById('r-tipo').textContent  = res.nombre;
+    document.getElementById('r-hora').textContent  = res.hora;
+    document.getElementById('r-fecha').textContent = new Date().toISOString().slice(0,10);
+    document.getElementById('r-loc').textContent   = '—';
+    document.getElementById('r-prow').style.display='none';
+    document.getElementById('r-frow').style.display='none';
     document.getElementById('r-wa').style.display='none';
-    currentResult=null;
     showToast(res.error);
-    box.scrollIntoView({behavior:'smooth',block:'nearest'});
+  } else {
+    box.classList.add('err-box');
+    document.getElementById('r-name').textContent  = '❌ No registrado';
+    document.getElementById('r-tipo').textContent  = res.error||'Error desconocido';
+    document.getElementById('r-hora').textContent  = '—';
+    document.getElementById('r-fecha').textContent = '—';
+    document.getElementById('r-loc').textContent   = '—';
+    document.getElementById('r-prow').style.display='none';
+    document.getElementById('r-frow').style.display='none';
+    document.getElementById('r-wa').style.display='none';
+    showToast(res.error||'❌ Error');
   }
 }
 
-// ══ NOTIFICAR PADRE ══
-function notificarPadre(){
-  if(!currentResult) return;
-  const r=currentResult.reg; const s=currentResult.estudiante;
-  const cel=s.cel||'';
+// ══ NOTIFICAR MANUALMENTE (botón WA en resultado) ══
+function notificarPadreManual(){
+  if(!currentResult||!currentResult.reg) return;
+  const r   = currentResult.reg;
+  const cel = r.cel ? r.cel.replace(/\D/g,'') : '';
+  if(!cel){ showToast('⚠️ Sin número registrado'); return; }
   const puntMsg = r.penalidad_fnx>0
-    ? `\n⚠️ Puntualidad: ${r.etiqueta_puntualidad}\n🔥 FNX descontados: -${r.penalidad_fnx} FNX (saldo: ${r.fnx_despues} FNX)`
+    ? `\n⚠️ *Puntualidad:* ${r.etiqueta}\n🔥 FNX descontados: -${r.penalidad_fnx} (saldo: ${r.fnx_despues} FNX)`
     : `\n✅ Llegó a tiempo · Sin descuento FNX`;
-  const msg=encodeURIComponent(
-    `🏫 *CORPOSEPI*\n\n`+
-    `📋 Registro de ingreso:\n\n`+
-    `👤 *${r.estudiante}*\n`+
-    `🕐 Hora: ${r.hora}\n`+
-    `📅 Fecha: ${r.fecha}\n`+
-    `📚 Clase: ${r.materia} · ${r.nivel}\n`+
-    `👩‍🏫 Docente: ${r.docente}`+
-    puntMsg+`\n\n`+
-    `🪪 Ver carnet: ${BASE_CARNETS}/?id=${r.id}\n`+
-    `📞 3208331239 · corposepi.org`
+  const locMsg = r.lat ? `\n📍 Ubicación: ${r.lat}, ${r.lng}` : '';
+  const msg = encodeURIComponent(
+    `🏫 *CORPOSEPI*\n\n📋 *Registro de ingreso*\n\n`+
+    `👤 ${r.nombre}\n🕐 Hora: ${r.hora}\n📅 Fecha: ${r.fecha}`+
+    puntMsg+locMsg+`\n\n📞 3208331239 · corposepi.org`
   );
   window.open(`https://wa.me/57${cel}?text=${msg}`,'_blank');
 }
 
-// ══ QR SALÓN ══
-function generarQRSalon(){
-  const salon=document.getElementById('qrs-salon').value.trim();
-  const nivel=document.getElementById('qrs-nivel').value;
-  const materia=document.getElementById('qrs-materia').value;
-  if(!salon||!nivel||!materia){showToast('⚠️ Completa todos los campos');return;}
-  const url=`${BASE_APP}?salon=${encodeURIComponent(salon)}&nivel=${encodeURIComponent(nivel)}&materia=${encodeURIComponent(materia)}&docente=${encodeURIComponent(userNombre)}`;
-  document.getElementById('qrp-nombre').textContent='🏫 '+salon;
-  document.getElementById('qrp-info').textContent=nivel+' · '+materia+(userNombre?' · '+userNombre:'');
-  document.getElementById('qrp-url').textContent=url;
-  const qrDiv=document.getElementById('qrp-code');
-  qrDiv.innerHTML='';
-  new QRCode(qrDiv,{text:url,width:200,height:200,colorDark:'#000',colorLight:'#fff',correctLevel:QRCode.CorrectLevel.M});
-  document.getElementById('qr-salon-result').style.display='block';
-  document.getElementById('qr-salon-result').scrollIntoView({behavior:'smooth'});
-  showToast('✅ QR del salón generado · listo para imprimir');
+// ══ CÁMARA QR ══
+async function toggleCam(){
+  if(scanActive) stopCam(); else startCam();
 }
 
-// ══ REPORTE ══
-async function cargarReporte(tipo, el){
-  currentReportType=tipo||'estudiantes';
-  if(el){ document.querySelectorAll('.rtt').forEach(t=>t.classList.remove('active')); el.classList.add('active'); }
-  const fecha=document.getElementById('rf-fecha').value||new Date().toISOString().slice(0,10);
-  const buscar=(document.getElementById('rf-buscar').value||'').toLowerCase();
-  const thead=document.getElementById('rep-thead');
-  const tbody=document.getElementById('rep-body');
-  tbody.innerHTML='<tr><td colspan="7" style="text-align:center;color:#555;padding:2rem">Cargando...</td></tr>';
-
+async function startCam(){
   try{
-    if(!db){tbody.innerHTML='<tr><td colspan="7" style="text-align:center;color:#555;padding:2rem">Sin conexión a Firebase</td></tr>';return;}
+    camStream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});
+    const vid = document.getElementById('cam-video');
+    vid.srcObject = camStream; vid.style.display='block';
+    document.getElementById('cam-idle').style.display='none';
+    document.getElementById('cam-line').style.display='block';
+    document.getElementById('btn-cam').textContent='⏹ Detener cámara';
+    scanActive = true;
+    scanInterval = setInterval(escanearFrame, 250);
+  }catch(e){ showToast('❌ Sin acceso a cámara'); }
+}
 
-    if(currentReportType==='docentes'){
-      // Reporte de ingreso de docentes
-      thead.innerHTML='<tr><th>Hora</th><th>Nombre</th><th>Cargo</th><th>Fecha</th></tr>';
-      const snap=await db.ref(`docentes/${fecha}`).once('value');
-      let rows=[];
-      snap.forEach(c=>rows.push(c.val()));
-      if(buscar) rows=rows.filter(r=>(r.nombre||'').toLowerCase().includes(buscar));
-      rows.sort((a,b)=>a.hora>b.hora?1:-1);
-      document.getElementById('st-doc').textContent=rows.length;
-      document.getElementById('rep-ttl').textContent='Ingreso docentes — '+fecha;
-      if(!rows.length){tbody.innerHTML='<tr><td colspan="4" style="text-align:center;color:#555;padding:2rem">Sin registros de docentes para '+fecha+'</td></tr>';return;}
-      tbody.innerHTML=rows.map(r=>`<tr>
-        <td class="mono">${r.hora}</td>
-        <td style="font-weight:600">${r.nombre}</td>
-        <td><span class="badge b-doc">${r.cargo}</span></td>
-        <td class="mono">${r.fecha}</td>
-      </tr>`).join('');
-    } else {
-      // Reporte estudiantes
-      thead.innerHTML='<tr><th>Hora</th><th>ID</th><th>Estudiante</th><th>Nivel</th><th>Materia</th><th>Docente</th><th>Puntualidad</th><th>FNX</th><th>Padre</th></tr>';
-      const snap=await db.ref(`asistencia/${fecha}`).once('value');
-      let rows=[];
-      snap.forEach(c=>rows.push(c.val()));
-      if(buscar) rows=rows.filter(r=>(r.estudiante||'').toLowerCase().includes(buscar)||(r.id||'').toLowerCase().includes(buscar));
-      rows.sort((a,b)=>a.hora>b.hora?1:-1);
-      // Stats
-      document.getElementById('st-est').textContent=rows.length;
-      document.getElementById('st-pres').textContent=rows.filter(r=>r.estado==='P').length;
-      document.getElementById('st-total').textContent=rows.length;
-      document.getElementById('rep-ttl').textContent='Asistencia estudiantes — '+fecha;
-      if(!rows.length){tbody.innerHTML='<tr><td colspan="8" style="text-align:center;color:#555;padding:2rem">Sin registros para '+fecha+'</td></tr>';return;}
-      tbody.innerHTML=rows.map(r=>`<tr>
-        <td class="mono">${r.hora}</td>
-        <td class="mono">${r.id}</td>
-        <td style="font-weight:600;white-space:nowrap">${r.estudiante}</td>
-        <td style="font-size:.68rem;color:var(--muted)">${r.nivel||'—'}</td>
-        <td style="font-size:.68rem">${r.materia||'—'}</td>
-        <td style="font-size:.68rem;color:var(--muted)">${r.docente||'—'}</td>
-        <td style="font-size:.68rem;">${r.etiqueta_puntualidad||'✅ A tiempo'}</td>
-        <td style="font-size:.7rem;color:${(r.penalidad_fnx||0)>0?'#f87171':'#4ade80'};font-weight:700;">${(r.penalidad_fnx||0)>0?'-'+r.penalidad_fnx+' FNX':'—'}</td>
-        <td>${r.cel?`<button onclick="notifPadreRep('${r.estudiante}','${r.id}','${r.cel}','${r.hora}','${r.materia||''}','${r.etiqueta_puntualidad||''}','${r.penalidad_fnx||0}','${r.fnx_despues||0}')" style="background:#25D366;border:none;border-radius:6px;padding:3px 8px;color:#fff;font-size:.62rem;cursor:pointer;">📱</button>`:'—'}</td>
-      </tr>`).join('');
+function stopCam(){
+  if(camStream) camStream.getTracks().forEach(t=>t.stop());
+  clearInterval(scanInterval); scanActive=false;
+  document.getElementById('cam-video').style.display='none';
+  document.getElementById('cam-idle').style.display='flex';
+  document.getElementById('cam-line').style.display='none';
+  document.getElementById('btn-cam').textContent='📷 Activar cámara — escanear QR';
+}
+
+function escanearFrame(){
+  const vid = document.getElementById('cam-video');
+  if(!vid.videoWidth) return;
+  const canvas = document.createElement('canvas');
+  canvas.width=vid.videoWidth; canvas.height=vid.videoHeight;
+  canvas.getContext('2d').drawImage(vid,0,0);
+  const img = canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height);
+  const code = jsQR(img.data, img.width, img.height, {inversionAttempts:'dontInvert'});
+  if(!code) return;
+  const url = code.data;
+  // Extraer ID del QR (formato: .../?id=CORP-...)
+  const match = url.match(/[?&]id=([A-Z0-9\-]+)/i);
+  if(!match){ showToast('⚠️ QR no reconocido'); return; }
+  const id = match[1].toUpperCase();
+  stopCam();
+  procesarIngreso(id);
+}
+
+// ══ REGISTRO MANUAL ══
+function registrarManual(){
+  const id = document.getElementById('manual-id').value.trim().toUpperCase();
+  if(!id){ showToast('⚠️ Ingresa un ID'); return; }
+  procesarIngreso(id);
+}
+
+// ══ PROCESAR INGRESO (desde QR o manual) ══
+async function procesarIngreso(id){
+  showToast('🔄 Buscando '+id+'...');
+  if(!db){ mostrarResultado({ok:false,error:'Sin conexión a Firebase'}); return; }
+
+  // Buscar en estudiantes
+  const snapSt = await db.ref('corposepi/students').once('value');
+  const students = snapSt.val()||[];
+  const est = students.find(s=>s&&s.id===id);
+  if(est){
+    if(est.status==='blocked'){
+      mostrarResultado({ok:false,error:'🚫 Carnet bloqueado — contacta administración'}); return;
     }
-  }catch(e){
-    tbody.innerHTML=`<tr><td colspan="8" style="text-align:center;color:var(--red);padding:2rem">Error: ${e.message}</td></tr>`;
+    const res = await registrarIngreso(id,'student',est.nombres+' '+est.apellidos, est.cel||null);
+    mostrarResultado(res); return;
+  }
+
+  // Buscar en personal
+  const snapSf = await db.ref('corposepi/staff').once('value');
+  const staff = snapSf.val()||[];
+  const doc = staff.find(s=>s&&s.id===id);
+  if(doc){
+    const res = await registrarIngreso(id,'staff',doc.nombres+' '+doc.apellidos, null);
+    mostrarResultado(res); return;
+  }
+
+  mostrarResultado({ok:false,error:'❌ ID '+id+' no encontrado en CORPOSEPI'});
+}
+
+// ══ PROCESO 2PM ══
+let pm2Ejecutado = false;
+
+function verificar2PM(){
+  const ahora = new Date();
+  const hoy   = ahora.toISOString().slice(0,10);
+  const minutos = ahora.getHours()*60 + ahora.getMinutes();
+  const clave = 'pm2_'+hoy;
+
+  if(minutos >= 14*60 && !localStorage.getItem(clave)){
+    document.getElementById('pm-bar').style.display='flex';
+    if(userRole==='admin' && !pm2Ejecutado){
+      pm2Ejecutado = true;
+      localStorage.setItem(clave,'1');
+      ejecutar2PM();
+    }
   }
 }
 
-function notifPadreRep(nombre,id,cel,hora,materia,etiqueta,penalidad,fnxSaldo){
-  const puntMsg = parseInt(penalidad)>0
-    ? `\n⚠️ ${etiqueta}\n🔥 FNX descontados: -${penalidad} FNX (saldo: ${fnxSaldo} FNX)`
-    : `\n✅ Llegó a tiempo`;
-  const msg=encodeURIComponent(`🏫 *CORPOSEPI*\n\n📋 Registro de ingreso:\n👤 *${nombre}*\n🕐 ${hora} · 📚 ${materia}`+puntMsg+`\n\n🪪 ${BASE_CARNETS}/?id=${id}\n📞 3208331239`);
-  window.open(`https://wa.me/57${cel}?text=${msg}`,'_blank');
+async function ejecutar2PM(){
+  const hoy = new Date().toISOString().slice(0,10);
+  const status = document.getElementById('pm-status');
+  const body   = document.getElementById('pm-body');
+  if(status) status.textContent = '⏳ Procesando...';
+  if(body) body.innerHTML='';
+
+  if(!db){ if(status) status.textContent='Sin conexión.'; return; }
+
+  const snapSt   = await db.ref('corposepi/students').once('value');
+  const students = snapSt.val()||[];
+  const snapAs   = await db.ref(`asistencia/${hoy}`).once('value');
+  const asistidos= {};
+  snapAs.forEach(c=>{ asistidos[c.val().id]=true; });
+
+  let count=0;
+  const filas=[];
+
+  for(let i=0;i<students.length;i++){
+    const s=students[i];
+    if(!s||s.status!=='active') continue;
+    if(asistidos[s.id]) continue;
+
+    const fnxActual = parseFloat(s.fnx||0);
+    const fnxNuevo  = Math.max(0,fnxActual-75);
+    await db.ref(`corposepi/students/${i}/fnx`).set(fnxNuevo.toFixed(2));
+
+    const safeId=s.id.replace(/[^a-z0-9]/gi,'-');
+    await db.ref(`asistencia/${hoy}/${safeId}`).set({
+      id:s.id, tipo:'student', nombre:s.nombres+' '+s.apellidos,
+      fecha:hoy, hora:'14:00', timestamp:new Date().toISOString(),
+      estado:'A', penalidad_fnx:75,
+      fnx_antes:fnxActual, fnx_despues:fnxNuevo,
+      etiqueta:'❌ Ausente (-75 FNX)',
+      cel:s.cel||'', lat:'', lng:'', acc:''
+    });
+
+    let waSent=false;
+    if(s.cel && s.cel.length>=10){
+      const celNum=s.cel.replace(/\D/g,'');
+      const msg=encodeURIComponent(
+        `🏫 *CORPOSEPI*\n\n`+
+        `⚠️ *Ausencia registrada*\n\n`+
+        `👤 ${s.nombres} ${s.apellidos}\n`+
+        `📅 Fecha: ${hoy}\n`+
+        `🕑 No se registró ingreso hasta las 2:00 PM\n\n`+
+        `🔥 *FNX descontados:* -20 FNX\n`+
+        `💰 Saldo actual: ${fnxNuevo.toFixed(0)} FNX\n\n`+
+        `Si hubo error comuníquese:\n`+
+        `📞 3208331239 · corposepi.org`
+      );
+      setTimeout(()=>window.open(`https://wa.me/57${celNum}?text=${msg}`,'_blank'), count*1500);
+      waSent=true;
+    }
+
+    filas.push(`<tr>
+      <td class="mono">${s.id}</td>
+      <td>${s.nombres} ${s.apellidos}</td>
+      <td><span class="badge-aus">Ausente</span></td>
+      <td>${fnxActual.toFixed(0)}</td>
+      <td>${fnxNuevo.toFixed(0)}</td>
+      <td>${waSent?'✅':'—'}</td>
+    </tr>`);
+    count++;
+  }
+
+  if(body) body.innerHTML = filas.length ? filas.join('') : '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:1rem;">Todos los estudiantes registraron asistencia ✅</td></tr>';
+  if(status) status.textContent = count>0 ? `✅ ${count} ausencias registradas` : '✅ Sin ausencias — todos registraron hoy';
+  showToast(count>0 ? `🕑 ${count} ausencias registradas` : '✅ Todos presentes hoy');
 }
 
-function exportarCSV(){
-  const rows=[];
-  document.querySelectorAll('#rep-body tr').forEach(tr=>{
-    const cells=[...tr.querySelectorAll('td')].map(td=>td.textContent.trim().replace(/,/g,' '));
-    if(cells.length>1) rows.push(cells.slice(0,7).join(','));
+// ══ REPORTE ══
+async function cargarReporte(){
+  const fecha = document.getElementById('filt-fecha').value || new Date().toISOString().slice(0,10);
+  if(!db){ showToast('Sin conexión'); return; }
+  const snap = await db.ref(`asistencia/${fecha}`).once('value');
+  reporteData=[];
+  snap.forEach(c=>reporteData.push(c.val()));
+  // Ordenar por hora
+  reporteData.sort((a,b)=>a.hora>b.hora?1:-1);
+  filtrarReporte();
+}
+
+function filtrarReporte(){
+  const q    = (document.getElementById('filt-buscar').value||'').toLowerCase();
+  const tipo = document.getElementById('filt-tipo').value;
+  const list = reporteData.filter(r=>{
+    if(tipo && r.tipo!==tipo) return false;
+    if(q && !(r.nombre||'').toLowerCase().includes(q) && !(r.id||'').toLowerCase().includes(q)) return false;
+    return true;
   });
-  if(!rows.length){showToast('⚠️ Sin datos');return;}
-  const head=currentReportType==='docentes'?'Hora,Nombre,Cargo,Fecha':'Hora,ID,Estudiante,Nivel,Materia,Docente,Estado';
-  const csv=head+'\n'+rows.join('\n');
+  const body = document.getElementById('rep-body');
+  if(!list.length){ body.innerHTML='<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:1rem;">Sin registros</td></tr>'; return; }
+  body.innerHTML = list.map(r=>{
+    const badge = r.tipo==='staff'?'badge-doc':r.estado==='P'?'badge-ok':r.estado==='A'?'badge-aus':'badge-late';
+    const waBtn = (userRole==='admin'&&r.tipo==='student'&&r.cel)
+      ? `<button onclick="waReporte('${r.cel}','${r.nombre}','${r.hora}','${r.fecha}','${r.etiqueta||''}','${r.penalidad_fnx||0}','${r.fnx_despues||0}')" style="background:#25D366;border:none;border-radius:6px;padding:3px 8px;color:#fff;font-size:.6rem;cursor:pointer;">📱</button>`
+      : '—';
+    return `<tr>
+      <td class="mono">${r.id}</td>
+      <td style="font-weight:600">${r.nombre}</td>
+      <td>${r.tipo==='staff'?'👩‍🏫':'🎓'}</td>
+      <td class="mono">${r.hora}</td>
+      <td><span class="${badge}">${r.etiqueta||r.estado}</span></td>
+      <td style="font-size:.68rem">${r.tipo==='student'&&r.penalidad_fnx?'-'+r.penalidad_fnx:'—'}</td>
+      <td class="mono" style="font-size:.6rem">${r.lat||'—'}</td>
+      <td class="mono" style="font-size:.6rem">${r.lng||'—'}</td>
+      <td>${waBtn}</td>
+    </tr>`;
+  }).join('');
+}
+
+function waReporte(cel,nombre,hora,fecha,etiqueta,fnxD,fnxS){
+  const celNum=cel.replace(/\D/g,'');
+  const puntMsg=parseInt(fnxD)>0
+    ? `\n⚠️ *Puntualidad:* ${etiqueta}\n🔥 FNX descontados: -${fnxD} (saldo: ${fnxS} FNX)`
+    : `\n✅ Llegó a tiempo`;
+  const msg=encodeURIComponent(
+    `🏫 *CORPOSEPI*\n\n📋 *Registro de ingreso*\n\n`+
+    `👤 ${nombre}\n🕐 Hora: ${hora}\n📅 Fecha: ${fecha}`+
+    puntMsg+`\n\n📞 3208331239 · corposepi.org`
+  );
+  window.open(`https://wa.me/57${celNum}?text=${msg}`,'_blank');
+}
+
+function exportCSV(){
+  if(!reporteData.length){ showToast('Sin datos'); return; }
+  const h=['ID','Nombre','Tipo','Hora','Fecha','Estado','FNX Delta','FNX Saldo','Lat','Lng','Precisión(m)','Celular'];
+  const rows=reporteData.map(r=>[
+    r.id,r.nombre,r.tipo,r.hora,r.fecha,
+    r.etiqueta||r.estado,
+    r.penalidad_fnx||0,r.fnx_despues||'—',
+    r.lat||'',r.lng||'',r.acc||'',r.cel||''
+  ]);
+  const csv=[h,...rows].map(row=>row.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
   const a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
-  a.download=`asistencia_${currentReportType}_${document.getElementById('rf-fecha').value}.csv`;
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
+  a.download=`asistencia_${document.getElementById('filt-fecha').value||'hoy'}.csv`;
   a.click();
-  showToast('📥 CSV exportado');
+  showToast('✅ CSV exportado');
 }
 
-// ══ APLICAR AUSENCIAS (botón admin al final del día) ══
-async function confirmarAusencias(){
-  if(!confirm('¿Aplicar -20 FNX a todos los estudiantes que NO registraron ingreso hoy?\nEsta acción no se puede deshacer.')) return;
-  showToast('⏳ Aplicando ausencias...');
-  const count = await aplicarAusencias();
-  showToast('✅ '+count+' ausencias aplicadas (-20 FNX cada una)');
-  setTimeout(()=>cargarReporte('estudiantes'), 1500);
+// ══ TOAST ══
+// ══ BASE APP URL ══
+const BASE_ASISTENCIA = 'https://corposepi.github.io/corposepi-asistencia/registro.html';
+
+// ══ GENERAR QR ══
+let qrURL = '';
+let qrLugar = '';
+
+function generarQR(){
+  const lugar = document.getElementById('qr-lugar').value.trim() || 'CORPOSEPI';
+  qrLugar = lugar;
+  // URL que abre la página de registro con param lugar
+  qrURL = BASE_ASISTENCIA + '?lugar=' + encodeURIComponent(lugar);
+
+  // Mostrar sección
+  document.getElementById('qr-print-section').style.display='block';
+  document.getElementById('qrp-lugar-text').textContent = lugar + ' · ' + new Date().toLocaleDateString('es-CO');
+  document.getElementById('qrp-url-text').textContent = qrURL;
+
+  // Generar QR imprimible
+  const qrDiv = document.getElementById('qrp-code');
+  qrDiv.innerHTML = '';
+  new QRCode(qrDiv, {text:qrURL, width:200, height:200, colorDark:'#000', colorLight:'#fff', correctLevel:QRCode.CorrectLevel.M});
+
+  document.getElementById('qr-print-section').scrollIntoView({behavior:'smooth'});
+  showToast('✅ QR generado · listo para imprimir');
 }
 
-function showToast(m){
+function imprimirQR(){
+  const content = document.getElementById('qr-print-content').innerHTML;
+  const w = window.open('','_blank');
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <style>
+    body{font-family:'Helvetica',sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;background:#f5f5f5;}
+    .wrap{background:#fff;border-radius:18px;padding:2rem;text-align:center;max-width:380px;box-shadow:0 4px 24px rgba(0,0,0,.15);}
+    .qrp-logo{font-size:2rem;margin-bottom:.25rem;}
+    .qrp-inst{font-size:.6rem;color:#B8410A;font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.2rem;}
+    .qrp-title{font-size:1.2rem;font-weight:900;color:#1a1a1a;margin-bottom:.15rem;}
+    .qrp-sub{font-size:.7rem;color:#666;margin-bottom:1rem;}
+    .qrp-qr{display:flex;justify-content:center;margin-bottom:.85rem;}
+    .qrp-steps{text-align:left;background:#f5f0e8;border-radius:10px;padding:.85rem 1rem;margin-bottom:.85rem;}
+    .qrp-step{font-size:.68rem;color:#333;margin-bottom:.25rem;line-height:1.5;}
+    .qrp-url{font-family:monospace;font-size:.52rem;color:#B8410A;word-break:break-all;background:#fef3e8;padding:.4rem .7rem;border-radius:6px;border:1px dashed #B8410A;}
+    .qrp-footer{font-size:.56rem;color:#aaa;margin-top:.75rem;}
+  </style></head><body><div class="wrap">${content}</div></body></html>`);
+  w.document.close();
+  setTimeout(()=>w.print(), 600);
+}
+
+function mostrarPantalla(){
+  const wrap = document.getElementById('qr-screen');
+  wrap.style.display = 'block';
+  document.getElementById('qrs-lugar-big').textContent = qrLugar;
+
+  const qrDiv = document.getElementById('qrs-code-big');
+  qrDiv.innerHTML = '';
+  new QRCode(qrDiv, {text:qrURL, width:260, height:260, colorDark:'#000', colorLight:'#fff', correctLevel:QRCode.CorrectLevel.M});
+  wrap.scrollIntoView({behavior:'smooth'});
+}
+
+function cerrarPantalla(){
+  document.getElementById('qr-screen').style.display='none';
+}
+
+function compartirQR(){
+  if(!qrURL){ showToast('⚠️ Genera el QR primero'); return; }
+  const msg = encodeURIComponent(
+    `🏫 *CORPOSEPI — Registro de asistencia*\n\n`+
+    `📍 ${qrLugar}\n\n`+
+    `Escanea el QR o entra al enlace:\n${qrURL}\n\n`+
+    `📞 3208331239 · corposepi.org`
+  );
+  window.open(`https://wa.me/?text=${msg}`,'_blank');
+}
+
+// ══ MODO REGISTRO POR QR (estudiante escanea desde su celular) ══
+// Si la URL tiene ?lugar=... → modo registro público
+(function(){
+  const params = new URLSearchParams(window.location.search);
+  const lugar  = params.get('lugar');
+  const idParam= params.get('id');
+  if(!lugar && !idParam) return; // modo normal
+
+  // Ocultar login, mostrar formulario de registro rápido
+  document.getElementById('login-screen').innerHTML = `
+    <div class="login-box" style="text-align:center;">
+      <div class="login-logo">
+        <img src="https://corposepi.github.io/corposepi-aprende/logo.png" style="height:60px;filter:drop-shadow(0 4px 16px rgba(184,65,10,.4))"/>
+        <div class="login-title">CORPOSEPI</div>
+        <div class="login-sub">Registro de Asistencia</div>
+      </div>
+      <div style="background:rgba(184,65,10,.1);border:1px solid rgba(184,65,10,.2);border-radius:12px;padding:.75rem;margin-bottom:1.25rem;font-size:.75rem;color:var(--corp2);">
+        📍 <strong>${decodeURIComponent(lugar||'')}</strong><br>
+        <span style="font-size:.62rem;color:var(--muted)">${new Date().toLocaleDateString('es-CO',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}</span>
+      </div>
+      <div class="lform">
+        <div class="lerr" id="err-pub">ID o documento incorrecto.</div>
+        <input class="li" id="pub-id" placeholder="Tu ID (ej: CORP-2025-0001)" style="text-transform:uppercase" onkeydown="if(event.key==='Enter')registrarPublico()"/>
+        <input class="li" id="pub-doc" placeholder="Número de documento" onkeydown="if(event.key==='Enter')registrarPublico()"/>
+        <button class="lbtn" onclick="registrarPublico()">✅ Registrar mi asistencia</button>
+        <div class="lnote">📞 3208331239 · corposepi.org</div>
+      </div>
+      <div id="pub-result" style="display:none;margin-top:1rem;background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.25);border-radius:12px;padding:1rem;text-align:left;font-size:.75rem;"></div>
+    </div>`;
+
+  window.registrarPublico = async function(){
+    const id  = document.getElementById('pub-id').value.trim().toUpperCase();
+    const doc = document.getElementById('pub-doc').value.trim();
+    const err = document.getElementById('err-pub');
+    if(!id||!doc){ err.textContent='Ingresa tu ID y documento.'; err.classList.add('show'); return; }
+
+    try{
+      if(!firebase.apps.length) firebase.initializeApp(FB_CONFIG);
+      const dbPub = firebase.database();
+
+      const snapSt = await dbPub.ref('corposepi/students').once('value');
+      const students = snapSt.val()||[];
+      const est = students.find(s=>s&&s.id===id&&s.numdoc===doc);
+      if(!est){ err.textContent='ID o documento incorrecto.'; err.classList.add('show'); return; }
+      if(est.status==='blocked'){ err.textContent='Carnet bloqueado. Contacta administración.'; err.classList.add('show'); return; }
+      err.classList.remove('show');
+
+      const ahora  = new Date();
+      const hoy    = ahora.toISOString().slice(0,10);
+      const hora   = ahora.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
+      const safeId = id.replace(/[^a-z0-9]/gi,'-');
+
+      // Verificar duplicado
+      const yaSnap = await dbPub.ref('asistencia/'+hoy+'/'+safeId).once('value');
+      if(yaSnap.val()){
+        const prev = yaSnap.val();
+        document.getElementById('pub-result').style.display='block';
+        document.getElementById('pub-result').innerHTML=
+          '<strong style="color:var(--amber)">⚠️ Ya registraste hoy a las '+prev.hora+'</strong><br>'+
+          'Si es un error llama al 📞 3208331239';
+        return;
+      }
+
+      // Pena FNX
+      const h = ahora.getHours()*60+ahora.getMinutes();
+      let pena = {penalidad:0,etiqueta:'✅ A tiempo',estado:'P'};
+      if(h>8*60+10&&h<=9*60)  pena={penalidad:5, etiqueta:'🟡 Tardanza leve (-5 FNX)', estado:'TL'};
+      else if(h>9*60&&h<=10*60+40) pena={penalidad:10,etiqueta:'🟠 Tardanza moderada (-10 FNX)',estado:'TM'};
+      else if(h>10*60+40)     pena={penalidad:20,etiqueta:'🔴 Tardanza grave (-20 FNX)',estado:'TG'};
+
+      const fnxActual = parseFloat(est.fnx||0);
+      const fnxNuevo  = Math.max(0,fnxActual-pena.penalidad);
+      const idx = students.findIndex(s=>s&&s.id===id);
+      if(pena.penalidad>0 && idx>=0)
+        await dbPub.ref('corposepi/students/'+idx+'/fnx').set(fnxNuevo.toFixed(2));
+
+      // GPS
+      let lat='',lng='',acc='';
+      try{
+        await new Promise(res=>navigator.geolocation.getCurrentPosition(
+          p=>{lat=p.coords.latitude.toFixed(6);lng=p.coords.longitude.toFixed(6);acc=Math.round(p.coords.accuracy);res();},
+          ()=>res(),{timeout:6000,enableHighAccuracy:true}
+        ));
+      }catch(e){}
+
+      const reg = {
+        id, tipo:'student', nombre:est.nombres+' '+est.apellidos,
+        fecha:hoy, hora, timestamp:ahora.toISOString(),
+        estado:pena.estado, penalidad_fnx:pena.penalidad,
+        fnx_antes:fnxActual, fnx_despues:fnxNuevo,
+        etiqueta:pena.etiqueta, cel:est.cel||'',
+        lat, lng, acc,
+        lugar: decodeURIComponent(lugar||'')
+      };
+      await dbPub.ref('asistencia/'+hoy+'/'+safeId).set(reg);
+
+      // Mostrar resultado
+      document.getElementById('pub-result').style.display='block';
+      document.getElementById('pub-result').innerHTML =
+        '<strong style="color:var(--green);font-size:.9rem">✅ ¡Asistencia registrada!</strong><br><br>'+
+        '👤 <strong>'+est.nombres+' '+est.apellidos+'</strong><br>'+
+        '🕐 Hora: <strong>'+hora+'</strong><br>'+
+        '📅 Fecha: '+hoy+'<br>'+
+        '⚡ '+pena.etiqueta+
+        (lat?'<br>📍 '+lat+', '+lng:'')+'<br><br>'+
+        '<span style="font-size:.65rem;color:var(--muted)">Tu familia recibirá notificación por WhatsApp si hay número registrado.</span>';
+
+      // Ocultar form
+      document.querySelector('.lform').style.display='none';
+
+      // Enviar WA a papás
+      if(est.cel && est.cel.length>=10){
+        const celNum=est.cel.replace(/\D/g,'');
+        const locMsg = lat?'\n📍 Ubicación: '+lat+', '+lng:'';
+        const puntMsg = pena.penalidad>0
+          ? '\n⚠️ *Puntualidad:* '+pena.etiqueta+'\n🔥 FNX descontados: -'+pena.penalidad+' (saldo: '+fnxNuevo.toFixed(0)+' FNX)'
+          : '\n✅ Llegó a tiempo · Sin descuento FNX';
+        const msgWA = encodeURIComponent(
+          '🏫 *CORPOSEPI*\n\n'+
+          '📋 *Registro de ingreso*\n\n'+
+          '👤 '+est.nombres+' '+est.apellidos+'\n'+
+          '🕐 Hora: '+hora+'\n'+
+          '📅 Fecha: '+hoy+
+          (lugar?'\n📍 Lugar: '+decodeURIComponent(lugar):'')+
+          puntMsg+locMsg+'\n\n'+
+          '📞 3208331239 · corposepi.org'
+        );
+        setTimeout(()=>window.open('https://wa.me/57'+celNum+'?text='+msgWA,'_blank'),800);
+      }
+    }catch(e){
+      document.getElementById('err-pub').textContent='Error: '+e.message;
+      document.getElementById('err-pub').classList.add('show');
+    }
+  };
+})();
+
+function showToast(msg){
   const t=document.getElementById('toast');
-  if(!t)return;
-  t.textContent=m;
-  t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'),3500);
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),3000);
 }
 </script>
 </body>
