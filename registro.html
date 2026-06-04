@@ -274,7 +274,7 @@ async function registrar(){
     // Mostrar éxito
     mostrarExito(est, hora, pena, fnxNuevo);
 
-    // Enviar WhatsApp a papás
+    // Botón WhatsApp para notificar al acudiente
     if(est.cel && est.cel.replace(/\D/g,'').length>=10){
       const celNum = est.cel.replace(/\D/g,'');
       const locMsg = geoLat ? '\n📍 Ubicación: '+geoLat+', '+geoLng : '';
@@ -291,8 +291,13 @@ async function registrar(){
         puntMsg+locMsg+'\n\n'+
         '📞 3208331239 · corposepi.org'
       );
-      setTimeout(()=>window.open('https://wa.me/57'+celNum+'?text='+msg,'_blank'), 1000);
-      document.getElementById('wa-sent').style.display='block';
+      const waLink = 'https://wa.me/57'+celNum+'?text='+msg;
+      const waBtn = document.getElementById('wa-sent');
+      waBtn.innerHTML = '📱 Toca aquí para notificar a tu familia por WhatsApp';
+      waBtn.style.display = 'block';
+      waBtn.style.cursor = 'pointer';
+      waBtn.style.textDecoration = 'underline';
+      waBtn.onclick = () => { window.open(waLink, '_blank'); waBtn.innerHTML = '✅ WhatsApp abierto — envía el mensaje'; waBtn.style.textDecoration='none'; waBtn.onclick=null; };
     }
 
   }catch(e){

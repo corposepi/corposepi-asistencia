@@ -264,7 +264,7 @@ td{padding:.45rem .6rem;border-bottom:1px solid var(--dark3);vertical-align:midd
   <div class="tab-content" id="tab-rep">
     <div class="rep-wrap">
       <div class="rep-filt">
-        <input class="rep-inp" type="date" id="filt-fecha" onchange="cargarReporte()"/>
+        <input class="rep-inp" type="date" id="filt-fecha" onchange="reporteFechaActiva=null; cargarReporte()"/>
         <input class="rep-inp" id="filt-buscar" placeholder="Buscar nombre o ID..." oninput="filtrarReporte()"/>
         <select class="rep-inp" id="filt-tipo" onchange="filtrarReporte()" style="max-width:130px;">
           <option value="">Todos</option>
@@ -379,6 +379,8 @@ let scanActive = false, camStream = null, scanInterval = null;
 let geoLat = null, geoLng = null, geoAcc = null;
 let currentResult = null;
 let reporteData = [];
+let reporteListener = null;   // listener tiempo real del reporte
+let reporteFechaActiva = null; // fecha que el listener está escuchando
 
 // ══ FIREBASE ══
 try{
@@ -850,16 +852,23 @@ async function ejecutar2PM(){
   showToast(count>0 ? `🕑 ${count} ausencias registradas` : '✅ Todos presentes hoy');
 }
 
-// ══ REPORTE ══
-async function cargarReporte(){
+// ══ REPORTE (tiempo real) ══
+function cargarReporte(){
   const fecha = document.getElementById('filt-fecha').value || new Date().toISOString().slice(0,10);
   if(!db){ showToast('Sin conexión'); return; }
-  const snap = await db.ref(`asistencia/${fecha}`).once('value');
-  reporteData=[];
-  snap.forEach(c=>reporteData.push(c.val()));
-  // Ordenar por hora
-  reporteData.sort((a,b)=>a.hora>b.hora?1:-1);
-  filtrarReporte();
+  // Si ya hay un listener en esa misma fecha, no duplicar
+  if(reporteListener && reporteFechaActiva === fecha) return;
+  // Desconectar listener anterior si cambió la fecha
+  if(reporteListener && reporteFechaActiva){
+    db.ref(`asistencia/${reporteFechaActiva}`).off('value', reporteListener);
+  }
+  reporteFechaActiva = fecha;
+  reporteListener = db.ref(`asistencia/${fecha}`).on('value', snap => {
+    reporteData = [];
+    snap.forEach(c => reporteData.push(c.val()));
+    reporteData.sort((a,b) => a.hora > b.hora ? 1 : -1);
+    filtrarReporte();
+  });
 }
 
 function filtrarReporte(){
