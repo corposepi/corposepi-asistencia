@@ -264,14 +264,16 @@ td{padding:.45rem .6rem;border-bottom:1px solid var(--dark3);vertical-align:midd
   <div class="tab-content" id="tab-rep">
     <div class="rep-wrap">
       <div class="rep-filt">
-        <input class="rep-inp" type="date" id="filt-fecha" onchange="reporteFechaActiva=null; cargarReporte()"/>
+        <input class="rep-inp" type="date" id="filt-fecha" onchange="cargarReporte(true)"/>
         <input class="rep-inp" id="filt-buscar" placeholder="Buscar nombre o ID..." oninput="filtrarReporte()"/>
         <select class="rep-inp" id="filt-tipo" onchange="filtrarReporte()" style="max-width:130px;">
           <option value="">Todos</option>
           <option value="student">Estudiantes</option>
           <option value="staff">Personal</option>
         </select>
+        <button class="rep-btn" onclick="cargarReporte(true)" title="Actualizar">🔄</button>
         <button class="rep-btn" onclick="exportCSV()">⬇️ CSV</button>
+        <span id="rep-status" style="font-size:.62rem;color:var(--muted);margin-left:.25rem"></span>
       </div>
       <div class="rep-table">
         <table>
@@ -379,8 +381,6 @@ let scanActive = false, camStream = null, scanInterval = null;
 let geoLat = null, geoLng = null, geoAcc = null;
 let currentResult = null;
 let reporteData = [];
-let reporteListener = null;   // listener tiempo real del reporte
-let reporteFechaActiva = null; // fecha que el listener está escuchando
 
 // ══ FIREBASE ══
 try{
@@ -852,23 +852,34 @@ async function ejecutar2PM(){
   showToast(count>0 ? `🕑 ${count} ausencias registradas` : '✅ Todos presentes hoy');
 }
 
-// ══ REPORTE (tiempo real) ══
-function cargarReporte(){
-  const fecha = document.getElementById('filt-fecha').value || new Date().toISOString().slice(0,10);
-  if(!db){ showToast('Sin conexión'); return; }
-  // Si ya hay un listener en esa misma fecha, no duplicar
-  if(reporteListener && reporteFechaActiva === fecha) return;
-  // Desconectar listener anterior si cambió la fecha
-  if(reporteListener && reporteFechaActiva){
-    db.ref(`asistencia/${reporteFechaActiva}`).off('value', reporteListener);
-  }
-  reporteFechaActiva = fecha;
-  reporteListener = db.ref(`asistencia/${fecha}`).on('value', snap => {
+// ══ REPORTE ══
+let reporteAutoInterval = null;
+
+async function cargarReporte(forzar){
+  const fecha = document.getElementById('filt-fecha').value ||
+                new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD hora local
+  if(!db){ showToast('Sin conexión Firebase'); return; }
+
+  const st = document.getElementById('rep-status');
+  if(st) st.textContent = '⏳ Cargando...';
+
+  try{
+    const snap = await db.ref(`asistencia/${fecha}`).once('value');
     reporteData = [];
-    snap.forEach(c => reporteData.push(c.val()));
-    reporteData.sort((a,b) => a.hora > b.hora ? 1 : -1);
+    snap.forEach(c => { const v = c.val(); if(v) reporteData.push(v); });
+    reporteData.sort((a,b) => (a.hora||'') > (b.hora||'') ? 1 : -1);
     filtrarReporte();
-  });
+    const n = reporteData.length;
+    if(st) st.textContent = n ? `${n} registro${n>1?'s':''} · actualizado ${new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'})}` : 'Sin registros hoy';
+  }catch(e){
+    if(st) st.textContent = '⚠️ Error al leer Firebase';
+    showToast('⚠️ Error reporte: '+e.message);
+  }
+
+  // Auto-refresco cada 20s (solo se configura una vez)
+  if(!reporteAutoInterval){
+    reporteAutoInterval = setInterval(()=>cargarReporte(), 20000);
+  }
 }
 
 function filtrarReporte(){
