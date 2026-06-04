@@ -294,7 +294,7 @@ td{padding:.45rem .6rem;border-bottom:1px solid var(--dark3);vertical-align:midd
         <div style="font-size:.9rem;font-weight:800;margin-bottom:.5rem;color:var(--amber)">🕑 Proceso de ausencias 2PM</div>
         <div style="font-size:.72rem;color:var(--muted);line-height:1.7;margin-bottom:1rem;">
           Este proceso se ejecuta <strong>automáticamente</strong> a las 2:00 PM.<br>
-          Marca como <strong>Ausente (-20 FNX)</strong> a todos los estudiantes activos que no registraron ingreso.<br>
+          Marca como <strong>Ausente (-75 FNX)</strong> a todos los estudiantes activos que no registraron ingreso.<br>
           Se notifica automáticamente por WhatsApp al número registrado en cada carnet.<br>
           El personal docente queda en el historial sin descuentos.
         </div>
@@ -825,7 +825,7 @@ async function ejecutar2PM(){
         `👤 ${s.nombres} ${s.apellidos}\n`+
         `📅 Fecha: ${hoy}\n`+
         `🕑 No se registró ingreso hasta las 2:00 PM\n\n`+
-        `🔥 *FNX descontados:* -20 FNX\n`+
+        `🔥 *FNX descontados:* -75 FNX\n`+
         `💰 Saldo actual: ${fnxNuevo.toFixed(0)} FNX\n\n`+
         `Si hubo error comuníquese:\n`+
         `📞 3208331239 · corposepi.org`
