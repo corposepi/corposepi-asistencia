@@ -7,6 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet"/>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <style>
 :root{
   --corp:#B8410A;--corp2:#E8651A;--gold:#D4A843;
@@ -163,6 +164,7 @@ let db, geoLat='', geoLng='', geoAcc='';
 try{
   if(!firebase.apps.length) firebase.initializeApp(FB);
   db = firebase.database();
+  firebase.auth().signInAnonymously().catch(e=>console.error('Auth anónima:',e));
 }catch(e){ console.error(e); }
 
 // ── Leer parámetros ──

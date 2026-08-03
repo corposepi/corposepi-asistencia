@@ -4,14 +4,31 @@
 // no fines de semana, no feriados, no semanas inactivas (según Plataforma Aprende).
 
 const DB = 'https://corposepi-carnets-default-rtdb.firebaseio.com';
+const FIREBASE_API_KEY = 'AIzaSyARjZP37yHcNRtIFWXarSVvYJ4ZOChuZ54';
+
+let _idToken = null;
+async function getIdToken() {
+  if (_idToken) return _idToken;
+  const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${FIREBASE_API_KEY}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ returnSecureToken: true }),
+  });
+  if (!res.ok) throw new Error(`Error autenticando anónimamente: ${res.status}`);
+  const data = await res.json();
+  _idToken = data.idToken;
+  return _idToken;
+}
 
 async function getJSON(path) {
-  const res = await fetch(`${DB}/${path}.json`);
+  const token = await getIdToken();
+  const res = await fetch(`${DB}/${path}.json?auth=${token}`);
   if (!res.ok) throw new Error(`Error leyendo ${path}: ${res.status}`);
   return res.json();
 }
 async function putJSON(path, data) {
-  const res = await fetch(`${DB}/${path}.json`, {
+  const token = await getIdToken();
+  const res = await fetch(`${DB}/${path}.json?auth=${token}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),

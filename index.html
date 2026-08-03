@@ -7,6 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
@@ -386,6 +387,7 @@ let reporteData = [];
 try{
   if(!firebase.apps.length) firebase.initializeApp(FB_CONFIG);
   db = firebase.database();
+  firebase.auth().signInAnonymously().catch(e=>console.error('Auth anónima:',e));
 }catch(e){ console.warn('Firebase:', e); }
 
 // ══ GEOLOCALIZACIÓN ══
