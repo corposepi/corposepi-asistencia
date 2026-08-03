@@ -797,13 +797,15 @@ async function procesarIngreso(id){
 // ══ PROCESO 2PM ══
 let pm2Ejecutado = false;
 
-function verificar2PM(){
+async function verificar2PM(){
   const ahora = new Date();
   const hoy   = ahora.toISOString().slice(0,10);
   const minutos = ahora.getHours()*60 + ahora.getMinutes();
   const clave = 'pm2_'+hoy;
 
   if(minutos >= 14*60 && !localStorage.getItem(clave)){
+    const chequeoDia = await verificarDiaHabil(hoy, ahora.getDay());
+    if(!chequeoDia.habil) return; // día sin clases: no mostrar aviso de ausencias ni procesar nada
     document.getElementById('pm-bar').style.display='flex';
     if(userRole==='admin' && !pm2Ejecutado){
       pm2Ejecutado = true;
@@ -814,13 +816,23 @@ function verificar2PM(){
 }
 
 async function ejecutar2PM(){
-  const hoy = new Date().toISOString().slice(0,10);
+  const ahoraChk = new Date();
+  const hoy = ahoraChk.toISOString().slice(0,10);
   const status = document.getElementById('pm-status');
   const body   = document.getElementById('pm-body');
   if(status) status.textContent = '⏳ Procesando...';
   if(body) body.innerHTML='';
 
   if(!db){ if(status) status.textContent='Sin conexión.'; return; }
+
+  // No marcar ausencias/descontar FNX si hoy no es día hábil (fin de semana, feriado o semana inactiva)
+  const chequeoDia = await verificarDiaHabil(hoy, ahoraChk.getDay());
+  if(!chequeoDia.habil){
+    if(status) status.textContent = '📴 '+chequeoDia.motivo+' No se registran ausencias.';
+    if(body) body.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:1rem;">Hoy no hay clases — no se aplican descuentos de FNX.</td></tr>';
+    showToast('📴 Hoy no hay clases, no se procesan ausencias');
+    return;
+  }
 
   const snapSt   = await db.ref('corposepi/students').once('value');
   const students = snapSt.val()||[];
