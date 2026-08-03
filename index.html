@@ -295,12 +295,12 @@ td{padding:.45rem .6rem;border-bottom:1px solid var(--dark3);vertical-align:midd
       <div style="background:var(--dark3);border:1px solid rgba(251,191,36,.2);border-radius:14px;padding:1.25rem;">
         <div style="font-size:.9rem;font-weight:800;margin-bottom:.5rem;color:var(--amber)">🕑 Proceso de ausencias 2PM</div>
         <div style="font-size:.72rem;color:var(--muted);line-height:1.7;margin-bottom:1rem;">
-          Este proceso se ejecuta <strong>automáticamente</strong> a las 2:00 PM.<br>
-          Marca como <strong>Ausente (-75 FNX)</strong> a todos los estudiantes activos que no registraron ingreso.<br>
-          Se notifica automáticamente por WhatsApp al número registrado en cada carnet.<br>
+          Este proceso corre <strong>automáticamente en la nube todos los días hábiles a las 2:00 PM</strong> (no depende de tener esta pantalla abierta).<br>
+          Marca como <strong>Ausente (-75 FNX)</strong> a los estudiantes activos que no registraron ingreso, solo en días hábiles reales (no fines de semana, feriados ni semanas de receso).<br>
+          <em>El proceso en la nube no puede abrir WhatsApp por sí solo — para notificar a una familia, ve a la pestaña "Reporte" del día y usa el botón 📱 junto a cada estudiante ausente.</em><br>
           El personal docente queda en el historial sin descuentos.
         </div>
-        <button class="lbtn" onclick="ejecutar2PM()" style="width:auto;padding:.6rem 1.5rem;">🚀 Ejecutar proceso manual</button>
+        <button class="lbtn" onclick="ejecutar2PM()" style="width:auto;padding:.6rem 1.5rem;">🚀 Ejecutar ahora (respaldo manual)</button>
         <div style="margin-top:1rem;font-size:.68rem;color:var(--muted)" id="pm-status">—</div>
       </div>
       <div class="rep-table">
