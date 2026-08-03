@@ -531,6 +531,33 @@ function calcularPena(fecha){
                    return {penalidad:75, etiqueta:'🔴 Tardanza grave (-75 FNX)',estado:'TG', color:'#f87171'};
 }
 
+// ══ VERIFICAR DÍA HÁBIL (según semanas de trabajo y feriados de Plataforma Aprende) ══
+function lunesDeSemana(fechaISO){
+  const d = new Date(fechaISO+'T12:00:00');
+  const dow = d.getDay();
+  const diff = dow===0 ? -6 : 1-dow;
+  d.setDate(d.getDate()+diff);
+  return d.toLocaleDateString('en-CA');
+}
+async function verificarDiaHabil(fechaISO, diaSemanaNum){
+  if(diaSemanaNum===0) return {habil:false, motivo:'Hoy es domingo, no hay clases.'};
+  if(diaSemanaNum===6) return {habil:false, motivo:'Hoy es sábado, no hay clases.'};
+  if(!db) return {habil:true};
+  try{
+    const [snapFer, snapSem] = await Promise.all([
+      db.ref('aprende_feriados').once('value'),
+      db.ref('aprende_semanas').once('value'),
+    ]);
+    const feriados = Object.values(snapFer.val()||{});
+    const fer = feriados.find(f=>f && f.fecha===fechaISO);
+    if(fer) return {habil:false, motivo:'Hoy es feriado: '+(fer.nombre||'sin clases')+'.'};
+    const semanasActivas = snapSem.val()||{};
+    const lunes = lunesDeSemana(fechaISO);
+    if(semanasActivas[lunes]===false) return {habil:false, motivo:'Esta semana no hay clases (receso / vacaciones).'};
+    return {habil:true};
+  }catch(e){ return {habil:true}; } // si falla la verificación por red, no bloquear el registro
+}
+
 // ══ REGISTRO DE INGRESO (estudiante o staff) ══
 async function registrarIngreso(id, tipo, nombre, cel){
   try{
@@ -539,6 +566,11 @@ async function registrarIngreso(id, tipo, nombre, cel){
     const hora  = ahora.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
     const safeId= id.replace(/[^a-z0-9]/gi,'-');
     const geo   = getGeo();
+
+    const chequeoDia = await verificarDiaHabil(hoy, ahora.getDay());
+    if(!chequeoDia.habil){
+      return {ok:false, error:'🚫 '+chequeoDia.motivo+' No se registra asistencia.'};
+    }
 
     if(db){
       // Verificar si ya registró hoy

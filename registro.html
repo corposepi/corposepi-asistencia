@@ -195,6 +195,48 @@ if(navigator.geolocation){
   dot.className='gps-dot err'; txt.textContent='GPS no soportado';
 }
 
+// ══ VERIFICAR DÍA HÁBIL (según semanas de trabajo y feriados de Plataforma Aprende) ══
+function lunesDeSemana(fechaISO){
+  const d = new Date(fechaISO+'T12:00:00');
+  const dow = d.getDay();
+  const diff = dow===0 ? -6 : 1-dow;
+  d.setDate(d.getDate()+diff);
+  return d.toLocaleDateString('en-CA');
+}
+async function verificarDiaHabil(){
+  const dow = ahora.getDay();
+  if(dow===0) return {habil:false, motivo:'Hoy es domingo, no hay clases.'};
+  if(dow===6) return {habil:false, motivo:'Hoy es sábado, no hay clases.'};
+  if(!db) return {habil:true};
+  try{
+    const [snapFer, snapSem] = await Promise.all([
+      db.ref('aprende_feriados').once('value'),
+      db.ref('aprende_semanas').once('value'),
+    ]);
+    const feriados = Object.values(snapFer.val()||{});
+    const fer = feriados.find(f=>f && f.fecha===hoy);
+    if(fer) return {habil:false, motivo:'Hoy es feriado: '+(fer.nombre||'sin clases')+'.'};
+    const semanasActivas = snapSem.val()||{};
+    const lunes = lunesDeSemana(hoy);
+    if(semanasActivas[lunes]===false) return {habil:false, motivo:'Esta semana no hay clases (receso / vacaciones).'};
+    return {habil:true};
+  }catch(e){ return {habil:true}; }
+}
+(async()=>{
+  const chequeo = await verificarDiaHabil();
+  if(!chequeo.habil){
+    document.getElementById('form-wrap').style.display='none';
+    document.querySelector('.gps-bar').style.display='none';
+    const card = document.querySelector('.card');
+    const aviso = document.createElement('div');
+    aviso.style.cssText='text-align:center;padding:1.5rem 0;';
+    aviso.innerHTML = '<div style="font-size:2.5rem;margin-bottom:.75rem;">📴</div>'+
+      '<div style="font-size:1rem;font-weight:800;margin-bottom:.5rem;">Hoy no hay clases</div>'+
+      '<div style="font-size:.8rem;color:var(--muted);line-height:1.6;">'+chequeo.motivo+'<br>No se puede registrar asistencia.</div>';
+    card.appendChild(aviso);
+  }
+})();
+
 // ══ REGLAS FNX PUNTUALIDAD ══
 function calcPena(d){
   const m = d.getHours()*60+d.getMinutes();
@@ -213,6 +255,9 @@ async function registrar(){
   if(!id){ err.textContent='Ingresa tu ID CORPOSEPI.'; err.classList.add('show'); return; }
   if(!doc){ err.textContent='Ingresa tu número de documento.'; err.classList.add('show'); return; }
   if(!db){ err.textContent='Sin conexión. Intenta de nuevo.'; err.classList.add('show'); return; }
+
+  const chequeoDia = await verificarDiaHabil();
+  if(!chequeoDia.habil){ err.textContent='🚫 '+chequeoDia.motivo+' No se registra asistencia.'; err.classList.add('show'); return; }
 
   // Mostrar loader
   document.getElementById('form-wrap').style.display='none';
