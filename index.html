@@ -480,8 +480,9 @@ async function loginDocente(){
   if(!s){ err.textContent='ID o documento incorrecto.'; err.classList.add('show'); return; }
   err.classList.remove('show');
   userRole='docente'; userNombre=s.nombres+' '+s.apellidos; userCargo=s.cargo||'Docente'; userObj=s;
-  // Registrar ingreso del docente (solo historial, sin FNX, sin WA)
-  registrarIngreso(s.id, 'staff', userNombre, null);
+  // Ya NO se registra asistencia automáticamente al entrar al panel — la asistencia del
+  // docente ahora se marca únicamente escaneando el QR físico del lugar (con validación GPS),
+  // igual que los estudiantes. Entrar al panel completo (planeación, etc.) no cuenta como asistencia.
   iniciarApp();
 }
 
