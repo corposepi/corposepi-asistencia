@@ -165,7 +165,6 @@ td{padding:.45rem .6rem;border-bottom:1px solid var(--dark3);vertical-align:midd
     <div class="login-tabs">
       <div class="ltab adm active" onclick="switchTab('adm',this)">⚙️ Admin</div>
       <div class="ltab doc" onclick="switchTab('doc',this)">👩‍🏫 Docente</div>
-      <div class="ltab est" onclick="switchTab('est',this)">🎓 Estudiante</div>
     </div>
 
     <!-- Admin -->
@@ -183,14 +182,6 @@ td{padding:.45rem .6rem;border-bottom:1px solid var(--dark3);vertical-align:midd
       <button class="lbtn" onclick="loginDocente()">Ingresar</button>
     </div>
 
-    <!-- Estudiante -->
-    <div id="lf-est" class="lform" style="display:none">
-      <div class="lerr" id="err-est">ID o documento incorrecto.</div>
-      <input class="li" id="est-id" placeholder="Tu ID (ej: CORP-2025-0001)" onkeydown="if(event.key==='Enter')loginEstudiante()"/>
-      <input class="li" id="est-ndoc" placeholder="Número de documento" onkeydown="if(event.key==='Enter')loginEstudiante()"/>
-      <button class="lbtn" onclick="loginEstudiante()">Ver mi asistencia</button>
-      <div class="lnote">📞 3208331239 · corposepi.org</div>
-    </div>
   </div>
 </div>
 
@@ -461,7 +452,7 @@ function iniciarGeo(){
 function switchTab(t, el){
   document.querySelectorAll('.ltab').forEach(x=>x.classList.remove('active'));
   el.classList.add('active');
-  ['adm','doc','est'].forEach(id=>document.getElementById('lf-'+id).style.display='none');
+  ['adm','doc'].forEach(id=>document.getElementById('lf-'+id).style.display='none');
   document.getElementById('lf-'+t).style.display='flex';
 }
 
@@ -492,23 +483,6 @@ async function loginDocente(){
   iniciarApp();
 }
 
-async function loginEstudiante(){
-  const id  = document.getElementById('est-id').value.trim().toUpperCase();
-  const doc = document.getElementById('est-ndoc').value.trim();
-  const err = document.getElementById('err-est');
-  if(!id||!doc){ err.textContent='Ingresa ID y documento.'; err.classList.add('show'); return; }
-  if(!db){ err.textContent='Sin conexión.'; err.classList.add('show'); return; }
-  const snap = await db.ref('corposepi/students').once('value');
-  const students = snap.val()||[];
-  const s = students.find(x=>x&&x.id===id&&x.numdoc===doc);
-  if(!s){ err.textContent='ID o documento incorrecto.'; err.classList.add('show'); return; }
-  if(s.status==='blocked'){ err.textContent='Carnet bloqueado. Contacta administración.'; err.classList.add('show'); return; }
-  err.classList.remove('show');
-  userRole='estudiante'; userNombre=s.nombres+' '+s.apellidos; userObj=s;
-  // Auto-registrar ingreso
-  const res = await registrarIngreso(s.id, 'student', userNombre, s.cel||null);
-  iniciarApp(res);
-}
 
 function iniciarApp(resEstudiante){
   document.getElementById('login-screen').style.display='none';
