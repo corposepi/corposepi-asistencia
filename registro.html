@@ -313,90 +313,135 @@ async function registrar(){
   document.getElementById('loader').style.display='block';
 
   try{
-    // Buscar estudiante
-    const snap = await db.ref('corposepi/students').once('value');
-    const students = snap.val()||[];
+    // Buscar primero en estudiantes, si no aparece buscar en docentes/personal
+    const snapEst = await db.ref('corposepi/students').once('value');
+    const students = snapEst.val()||[];
     const idx = students.findIndex(s=>s&&s.id===id&&s.numdoc===doc);
 
-    if(idx<0){
+    if(idx>=0){
+      const est = students[idx];
+      if(est.status==='blocked'){
+        mostrarError('Carnet bloqueado.\nContacta administración: 📞 3208331239');
+        return;
+      }
+
+      const safeId = id.replace(/[^a-z0-9]/gi,'-');
+      const yaSnap = await db.ref('asistencia/'+hoy+'/'+safeId).once('value');
+      if(yaSnap.val()){
+        const prev = yaSnap.val();
+        mostrarDuplicado(est, prev.hora);
+        return;
+      }
+
+      const ahora2 = new Date();
+      const hora   = ahora2.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
+      const pena   = calcPena(ahora2);
+      const fnxActual = parseFloat(est.fnx||0);
+      const fnxNuevo  = Math.max(0, fnxActual - pena.p);
+
+      if(pena.p>0)
+        await db.ref('corposepi/students/'+idx+'/fnx').set(fnxNuevo.toFixed(2));
+
+      const reg = {
+        id, tipo:'student',
+        nombre: est.nombres+' '+est.apellidos,
+        fecha:hoy, hora,
+        timestamp: ahora2.toISOString(),
+        estado: pena.est,
+        penalidad_fnx: pena.p,
+        fnx_antes: fnxActual,
+        fnx_despues: fnxNuevo,
+        etiqueta: pena.lbl,
+        cel: est.cel||'',
+        lat: geoLat, lng: geoLng, acc: geoAcc,
+        lugar
+      };
+      await db.ref('asistencia/'+hoy+'/'+safeId).set(reg);
+      mostrarExito(est, hora, pena, fnxNuevo);
+
+      if(est.cel && est.cel.replace(/\D/g,'').length>=10){
+        const celNum = est.cel.replace(/\D/g,'');
+        const locMsg = geoLat ? '\n📍 Ubicación: '+geoLat+', '+geoLng : '';
+        const puntMsg = pena.p>0
+          ? '\n⚠️ *Puntualidad:* '+pena.lbl+'\n🔥 FNX descontados: -'+pena.p+' (saldo: '+fnxNuevo.toFixed(0)+' FNX)'
+          : '\n✅ Llegó a tiempo · Sin descuento FNX';
+        const msg = encodeURIComponent(
+          '🏫 *CORPOSEPI*\n\n'+
+          '📋 *Registro de ingreso*\n\n'+
+          '👤 '+est.nombres+' '+est.apellidos+'\n'+
+          '🕐 Hora: '+hora+'\n'+
+          '📅 Fecha: '+hoy+'\n'+
+          '📍 Lugar: '+lugar+
+          puntMsg+locMsg+'\n\n'+
+          '📞 3208331239 · corposepi.org'
+        );
+        const waLink = 'https://wa.me/57'+celNum+'?text='+msg;
+        const waBtn = document.getElementById('wa-sent');
+        waBtn.innerHTML = '📱 Toca aquí para notificar a tu familia por WhatsApp';
+        waBtn.style.display = 'block';
+        waBtn.style.cursor = 'pointer';
+        waBtn.style.textDecoration = 'underline';
+        waBtn.onclick = () => { window.open(waLink, '_blank'); waBtn.innerHTML = '✅ WhatsApp abierto — envía el mensaje'; waBtn.style.textDecoration='none'; waBtn.onclick=null; };
+      }
+      return;
+    }
+
+    // No es estudiante: buscar en docentes/personal (corposepi/staff)
+    const snapStaff = await db.ref('corposepi/staff').once('value');
+    const staffRaw = snapStaff.val();
+    const staffList = Array.isArray(staffRaw)?staffRaw:Object.values(staffRaw||{});
+    const doc2 = staffList.find(s=>s && s.id===id && String(s.numdoc)===String(doc));
+
+    if(!doc2){
       mostrarError('ID o número de documento incorrecto.\nVerifica e intenta de nuevo.');
       return;
     }
-    const est = students[idx];
-    if(est.status==='blocked'){
-      mostrarError('Carnet bloqueado.\nContacta administración: 📞 3208331239');
+    if(doc2.status==='blocked'){
+      mostrarError('Cuenta bloqueada.\nContacta administración: 📞 3208331239');
       return;
     }
 
-    // Verificar duplicado hoy
     const safeId = id.replace(/[^a-z0-9]/gi,'-');
     const yaSnap = await db.ref('asistencia/'+hoy+'/'+safeId).once('value');
     if(yaSnap.val()){
-      const prev = yaSnap.val();
-      mostrarDuplicado(est, prev.hora);
+      mostrarDuplicado(doc2, yaSnap.val().hora);
       return;
     }
 
-    // Calcular pena
     const ahora2 = new Date();
     const hora   = ahora2.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
-    const pena   = calcPena(ahora2);
-    const fnxActual = parseFloat(est.fnx||0);
-    const fnxNuevo  = Math.max(0, fnxActual - pena.p);
-
-    // Actualizar FNX si hay penalidad
-    if(pena.p>0)
-      await db.ref('corposepi/students/'+idx+'/fnx').set(fnxNuevo.toFixed(2));
-
-    // Guardar registro
     const reg = {
-      id, tipo:'student',
-      nombre: est.nombres+' '+est.apellidos,
+      id, tipo:'staff',
+      nombre: doc2.nombres+' '+(doc2.apellidos||''),
       fecha:hoy, hora,
       timestamp: ahora2.toISOString(),
-      estado: pena.est,
-      penalidad_fnx: pena.p,
-      fnx_antes: fnxActual,
-      fnx_despues: fnxNuevo,
-      etiqueta: pena.lbl,
-      cel: est.cel||'',
+      estado:'DOC', penalidad_fnx:0,
+      etiqueta:'👩‍🏫 Docente/Personal',
+      cel: doc2.cel||'',
       lat: geoLat, lng: geoLng, acc: geoAcc,
       lugar
     };
     await db.ref('asistencia/'+hoy+'/'+safeId).set(reg);
-
-    // Mostrar éxito
-    mostrarExito(est, hora, pena, fnxNuevo);
-
-    // Botón WhatsApp para notificar al acudiente
-    if(est.cel && est.cel.replace(/\D/g,'').length>=10){
-      const celNum = est.cel.replace(/\D/g,'');
-      const locMsg = geoLat ? '\n📍 Ubicación: '+geoLat+', '+geoLng : '';
-      const puntMsg = pena.p>0
-        ? '\n⚠️ *Puntualidad:* '+pena.lbl+'\n🔥 FNX descontados: -'+pena.p+' (saldo: '+fnxNuevo.toFixed(0)+' FNX)'
-        : '\n✅ Llegó a tiempo · Sin descuento FNX';
-      const msg = encodeURIComponent(
-        '🏫 *CORPOSEPI*\n\n'+
-        '📋 *Registro de ingreso*\n\n'+
-        '👤 '+est.nombres+' '+est.apellidos+'\n'+
-        '🕐 Hora: '+hora+'\n'+
-        '📅 Fecha: '+hoy+'\n'+
-        '📍 Lugar: '+lugar+
-        puntMsg+locMsg+'\n\n'+
-        '📞 3208331239 · corposepi.org'
-      );
-      const waLink = 'https://wa.me/57'+celNum+'?text='+msg;
-      const waBtn = document.getElementById('wa-sent');
-      waBtn.innerHTML = '📱 Toca aquí para notificar a tu familia por WhatsApp';
-      waBtn.style.display = 'block';
-      waBtn.style.cursor = 'pointer';
-      waBtn.style.textDecoration = 'underline';
-      waBtn.onclick = () => { window.open(waLink, '_blank'); waBtn.innerHTML = '✅ WhatsApp abierto — envía el mensaje'; waBtn.style.textDecoration='none'; waBtn.onclick=null; };
-    }
+    mostrarExitoDocente(doc2, hora);
 
   }catch(e){
     mostrarError('Error de conexión.\n'+e.message);
   }
+}
+
+function mostrarExitoDocente(doc2, hora){
+  document.getElementById('loader').style.display='none';
+  const res = document.getElementById('result');
+  res.style.display='block';
+  document.getElementById('res-icon').textContent  = '✅';
+  document.getElementById('res-title').textContent = '¡Asistencia registrada!';
+  document.getElementById('res-rows').innerHTML =
+    fila('👩‍🏫 Docente', doc2.nombres+' '+(doc2.apellidos||''))+
+    fila('🕐 Hora', hora)+
+    fila('📅 Fecha', hoy)+
+    fila('📍 Lugar', lugar)+
+    (geoLat ? fila('🌍 GPS', geoLat+', '+geoLng) : '');
+  document.getElementById('res-note').textContent = '¡Buen día de trabajo! 💪';
 }
 
 function mostrarExito(est, hora, pena, fnxNuevo){

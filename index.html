@@ -210,6 +210,7 @@ td{padding:.45rem .6rem;border-bottom:1px solid var(--dark3);vertical-align:midd
     <div class="tab" id="tab-btn-rep" onclick="showTab('rep',this)">📋 Reporte</div>
     <div class="tab" id="tab-btn-qr" onclick="showTab('qr',this)" style="display:none">🖨️ QR</div>
     <div class="tab" id="tab-btn-pm" onclick="showTab('pm',this)" style="display:none">🕑 2PM</div>
+    <div class="tab" id="tab-btn-doc" onclick="showTab('doc',this)" style="display:none">👩‍🏫 Docentes</div>
   </div>
 
   <!-- TAB ESCANEAR -->
@@ -308,6 +309,27 @@ td{padding:.45rem .6rem;border-bottom:1px solid var(--dark3);vertical-align:midd
         <table>
           <thead><tr><th>ID</th><th>Nombre</th><th>Estado aplicado</th><th>FNX antes</th><th>FNX después</th><th>WA enviado</th></tr></thead>
           <tbody id="pm-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB REPORTE DOCENTES -->
+  <div class="tab-content" id="tab-doc">
+    <div class="rep-wrap">
+      <div style="background:var(--dark3);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:1.25rem;">
+        <div style="font-size:.9rem;font-weight:800;margin-bottom:.85rem;">👩‍🏫 Asistencia mensual por docente</div>
+        <div style="display:flex;gap:.6rem;flex-wrap:wrap;margin-bottom:1rem;">
+          <select class="rep-inp" id="doc-rep-select" style="flex:1;min-width:180px;"><option value="">— Selecciona un docente —</option></select>
+          <input class="rep-inp" type="month" id="doc-rep-mes" style="max-width:160px;"/>
+          <button class="rep-btn" onclick="cargarReporteDocente()">🔍 Consultar</button>
+        </div>
+        <div id="doc-rep-resumen" style="font-size:.75rem;color:var(--muted);margin-bottom:.75rem;">Selecciona un docente y un mes.</div>
+      </div>
+      <div class="rep-table">
+        <table>
+          <thead><tr><th>Fecha</th><th>Día</th><th>Estado</th><th>Hora registro</th><th>Lugar</th></tr></thead>
+          <tbody id="doc-rep-body"></tbody>
         </table>
       </div>
     </div>
@@ -493,9 +515,10 @@ function iniciarApp(resEstudiante){
   // Tabs según rol
   const tabPM = document.getElementById('tab-btn-pm');
   const tabQR = document.getElementById('tab-btn-qr');
-  if(userRole==='admin'){ tabPM.style.display='block'; tabQR.style.display='block'; }
-  else if(userRole==='docente'){ tabQR.style.display='block'; tabPM.style.display='none'; }
-  else { tabPM.style.display='none'; tabQR.style.display='none'; }
+  const tabDoc = document.getElementById('tab-btn-doc');
+  if(userRole==='admin'){ tabPM.style.display='block'; tabQR.style.display='block'; tabDoc.style.display='block'; }
+  else if(userRole==='docente'){ tabQR.style.display='block'; tabPM.style.display='none'; tabDoc.style.display='none'; }
+  else { tabPM.style.display='none'; tabQR.style.display='none'; tabDoc.style.display='none'; }
 
   // El estudiante solo ve su resultado, no puede escanear a otros
   if(userRole==='estudiante'){
@@ -536,6 +559,7 @@ function showTab(t, el){
   document.getElementById('tab-'+t).classList.add('active');
   if(t==='rep') cargarReporte();
   if(t==='qr') cargarLugares();
+  if(t==='doc') cargarSelectDocentes();
 }
 
 // ══ GEOLOCALIZACIÓN — captura instantánea ══
@@ -1095,6 +1119,88 @@ function distanciaMetros(lat1,lng1,lat2,lng2){
   const dLat = toRad(lat2-lat1), dLng = toRad(lng2-lng1);
   const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLng/2)**2;
   return R * 2*Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+// ══ REPORTE MENSUAL POR DOCENTE ══
+async function cargarSelectDocentes(){
+  const sel = document.getElementById('doc-rep-select');
+  if(!sel||!db) return;
+  const snap = await db.ref('corposepi/staff').once('value');
+  const raw = snap.val();
+  const lista = Array.isArray(raw)?raw.filter(Boolean):Object.values(raw||{}).filter(Boolean);
+  sel.innerHTML = '<option value="">— Selecciona un docente —</option>'+
+    lista.map(s=>`<option value="${s.id}">${s.nombres} ${s.apellidos||''}</option>`).join('');
+  // Mes actual por defecto
+  const mesInput = document.getElementById('doc-rep-mes');
+  if(mesInput && !mesInput.value){
+    const hoy = new Date();
+    mesInput.value = hoy.getFullYear()+'-'+String(hoy.getMonth()+1).padStart(2,'0');
+  }
+}
+
+function lunesDeSemanaRep(fechaISO){
+  const d = new Date(fechaISO+'T12:00:00');
+  const dow = d.getDay();
+  const diff = dow===0 ? -6 : 1-dow;
+  d.setDate(d.getDate()+diff);
+  return d.toLocaleDateString('en-CA');
+}
+
+async function cargarReporteDocente(){
+  const docId = document.getElementById('doc-rep-select').value;
+  const mes = document.getElementById('doc-rep-mes').value; // "YYYY-MM"
+  const body = document.getElementById('doc-rep-body');
+  const resumen = document.getElementById('doc-rep-resumen');
+  if(!docId||!mes){ showToast('⚠️ Selecciona docente y mes'); return; }
+  resumen.textContent = 'Cargando...';
+  body.innerHTML = '';
+
+  const [snapFer, snapSem] = await Promise.all([
+    db.ref('aprende_feriados').once('value'),
+    db.ref('aprende_semanas').once('value'),
+  ]);
+  const feriados = Object.values(snapFer.val()||{});
+  const semanasActivas = snapSem.val()||{};
+
+  const [anio, mesNum] = mes.split('-').map(Number);
+  const diasEnMes = new Date(anio, mesNum, 0).getDate();
+  const nombresDia = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+
+  let diasHabiles=0, diasAsistio=0;
+  const filas=[];
+
+  for(let d=1; d<=diasEnMes; d++){
+    const fecha = anio+'-'+String(mesNum).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    const fechaObj = new Date(fecha+'T12:00:00');
+    const dow = fechaObj.getDay();
+
+    let habil = true, motivo = '';
+    if(dow===0||dow===6){ habil=false; }
+    else{
+      const fer = feriados.find(f=>f && f.fecha===fecha);
+      if(fer){ habil=false; motivo=fer.nombre||'Feriado'; }
+      else if(semanasActivas[lunesDeSemanaRep(fecha)]===false){ habil=false; motivo='Semana inactiva'; }
+    }
+    if(!habil) continue; // solo interesa día a día hábil, como pidió el admin
+
+    diasHabiles++;
+    const snapAs = await db.ref('asistencia/'+fecha+'/').once('value');
+    let registroDoc = null;
+    snapAs.forEach(c=>{ const v=c.val(); if(v && v.id===docId && v.tipo==='staff') registroDoc = v; });
+
+    if(registroDoc) diasAsistio++;
+    filas.push(`<tr>
+      <td>${fecha}</td>
+      <td>${nombresDia[dow]}</td>
+      <td>${registroDoc?'<span style="color:#4ade80;">✅ Asistió</span>':'<span style="color:#f87171;">❌ No registró</span>'}</td>
+      <td>${registroDoc?registroDoc.hora:'—'}</td>
+      <td>${registroDoc?(registroDoc.lugar||'—'):'—'}</td>
+    </tr>`);
+  }
+
+  body.innerHTML = filas.length ? filas.join('') : '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:1rem;">Sin días hábiles en este mes.</td></tr>';
+  const nombreDoc = document.getElementById('doc-rep-select').selectedOptions[0]?.textContent||'';
+  resumen.innerHTML = `<strong>${nombreDoc}</strong> · ${diasHabiles} días hábiles en el mes · <span style="color:#4ade80;">${diasAsistio} asistidos</span> · <span style="color:#f87171;">${diasHabiles-diasAsistio} sin registrar</span>`;
 }
 
 // ══ GENERAR QR ══
