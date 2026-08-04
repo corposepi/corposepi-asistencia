@@ -223,6 +223,12 @@ td{padding:.45rem .6rem;border-bottom:1px solid var(--dark3);vertical-align:midd
         <div class="loc-txt" id="loc-txt">Obteniendo ubicación...</div>
       </div>
 
+      <!-- Lugar donde se está registrando (obligatorio, valida GPS igual que el QR) -->
+      <div class="qr-card" style="margin-bottom:.75rem;">
+        <div class="qr-card-title" style="font-size:.78rem;">📍 ¿Dónde estás registrando ahora?</div>
+        <select class="qr-inp" id="scan-lugar-select"><option value="">— Selecciona el lugar —</option></select>
+      </div>
+
       <!-- Indicador 2PM -->
       <div class="pm-bar" id="pm-bar">
         🕑 <strong>2:00 PM alcanzado</strong> — Los estudiantes sin registro serán marcados como ausentes.
@@ -520,6 +526,7 @@ function iniciarApp(resEstudiante){
   if(userRole==='admin'){ tabPM.style.display='block'; tabQR.style.display='block'; tabDoc.style.display='block'; }
   else if(userRole==='docente'){ tabQR.style.display='block'; tabPM.style.display='none'; tabDoc.style.display='none'; }
   else { tabPM.style.display='none'; tabQR.style.display='none'; tabDoc.style.display='none'; }
+  cargarLugares();
 
   // El estudiante solo ve su resultado, no puede escanear a otros
   if(userRole==='estudiante'){
@@ -608,7 +615,7 @@ async function verificarDiaHabil(fechaISO, diaSemanaNum){
 }
 
 // ══ REGISTRO DE INGRESO (estudiante o staff) ══
-async function registrarIngreso(id, tipo, nombre, cel){
+async function registrarIngreso(id, tipo, nombre, cel, exigirLugar){
   try{
     const ahora = new Date();
     const hoy   = ahora.toLocaleDateString('en-CA');
@@ -626,6 +633,25 @@ async function registrarIngreso(id, tipo, nombre, cel){
     const minutosAhora = ahora.getHours()*60 + ahora.getMinutes();
     if(minutosAhora < 5*60 || minutosAhora > 15*60){
       return {ok:false, error:'🚫 Fuera del horario de registro de asistencia (5:00am–3:00pm). Si llegaste tarde y no alcanzaste a registrar, comunícate con administración: 3208331239.'};
+    }
+
+    // Debe indicar el lugar y estar físicamente cerca (igual que el QR físico) —
+    // solo se exige cuando se llama desde la pestaña Escanear (docente/admin registrando in situ)
+    let lugarNombre = '';
+    if(exigirLugar){
+      const lugarSel = document.getElementById('scan-lugar-select');
+      const lugarKey = lugarSel ? lugarSel.value : '';
+      if(!lugarKey) return {ok:false, error:'⚠️ Selecciona primero el lugar donde estás registrando (arriba de la cámara).'};
+      lugarNombre = lugarSel.selectedOptions[0].textContent;
+      if(!geo.lat) return {ok:false, error:'🚫 No se pudo obtener tu ubicación GPS. Actívala e inténtalo de nuevo.'};
+      const snapLugar = await db.ref('asistencia_lugares/'+lugarKey).once('value');
+      const cfgLugar = snapLugar.val();
+      if(cfgLugar){
+        const dist = distanciaMetros(parseFloat(geo.lat), parseFloat(geo.lng), cfgLugar.lat, cfgLugar.lng);
+        if(dist > (cfgLugar.radio||120)){
+          return {ok:false, error:'🚫 Estás a '+Math.round(dist)+'m de "'+cfgLugar.nombre+'". Debes estar en el lugar para registrar.'};
+        }
+      }
     }
 
     if(db){
@@ -668,7 +694,8 @@ async function registrarIngreso(id, tipo, nombre, cel){
       cel: cel||'',
       lat: geo.lat||'',
       lng: geo.lng||'',
-      acc: geo.acc||''
+      acc: geo.acc||'',
+      lugar: lugarNombre||''
     };
 
     if(db) await db.ref(`asistencia/${hoy}/${safeId}`).set(reg);
@@ -834,7 +861,7 @@ async function procesarIngreso(id){
     if(est.status==='blocked'){
       mostrarResultado({ok:false,error:'🚫 Carnet bloqueado — contacta administración'}); return;
     }
-    const res = await registrarIngreso(id,'student',est.nombres+' '+est.apellidos, est.cel||null);
+    const res = await registrarIngreso(id,'student',est.nombres+' '+est.apellidos, est.cel||null, true);
     mostrarResultado(res); return;
   }
 
@@ -843,7 +870,7 @@ async function procesarIngreso(id){
   const staff = snapSf.val()||[];
   const doc = staff.find(s=>s&&s.id===id);
   if(doc){
-    const res = await registrarIngreso(id,'staff',doc.nombres+' '+doc.apellidos, null);
+    const res = await registrarIngreso(id,'staff',doc.nombres+' '+doc.apellidos, null, true);
     mostrarResultado(res); return;
   }
 
@@ -1092,24 +1119,35 @@ async function eliminarLugar(key){
 async function cargarLugares(){
   const lista = document.getElementById('lugares-lista');
   const select = document.getElementById('qr-lugar-select');
-  if(!db||!lista) return;
+  const selectScan = document.getElementById('scan-lugar-select');
+  if(!db) return;
   const snap = await db.ref('asistencia_lugares').once('value');
   const data = snap.val()||{};
   const claves = Object.keys(data);
-  if(!claves.length){
-    lista.innerHTML = '<div style="font-size:.72rem;color:var(--muted,#888);">Sin lugares guardados todavía.</div>';
-  } else {
-    lista.innerHTML = claves.map(k=>{
-      const l = data[k];
-      return `<div style="display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.04);border-radius:8px;padding:.5rem .75rem;margin-bottom:.4rem;font-size:.75rem;">
-        <div><strong>${l.nombre}</strong><br><span style="color:var(--muted,#888);font-size:.65rem;">${l.lat.toFixed(5)}, ${l.lng.toFixed(5)} · margen ${l.radio}m</span></div>
-        <button onclick="eliminarLugar('${k}')" style="background:none;border:none;color:#f87171;cursor:pointer;font-size:.85rem;">🗑️</button>
-      </div>`;
-    }).join('');
+  if(lista){
+    if(!claves.length){
+      lista.innerHTML = '<div style="font-size:.72rem;color:var(--muted,#888);">Sin lugares guardados todavía.</div>';
+    } else {
+      lista.innerHTML = claves.map(k=>{
+        const l = data[k];
+        return `<div style="display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.04);border-radius:8px;padding:.5rem .75rem;margin-bottom:.4rem;font-size:.75rem;">
+          <div><strong>${l.nombre}</strong><br><span style="color:var(--muted,#888);font-size:.65rem;">${l.lat.toFixed(5)}, ${l.lng.toFixed(5)} · margen ${l.radio}m</span></div>
+          <button onclick="eliminarLugar('${k}')" style="background:none;border:none;color:#f87171;cursor:pointer;font-size:.85rem;">🗑️</button>
+        </div>`;
+      }).join('');
+    }
   }
   if(select){
+    const valPrevio = select.value;
     select.innerHTML = '<option value="">— Selecciona un lugar guardado —</option>'+
       claves.map(k=>`<option value="${k}">${data[k].nombre}</option>`).join('');
+    if(claves.includes(valPrevio)) select.value = valPrevio;
+  }
+  if(selectScan){
+    const valPrevio = selectScan.value;
+    selectScan.innerHTML = '<option value="">— Selecciona el lugar —</option>'+
+      claves.map(k=>`<option value="${k}">${data[k].nombre}</option>`).join('');
+    if(claves.includes(valPrevio)) selectScan.value = valPrevio;
   }
 }
 
