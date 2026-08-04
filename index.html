@@ -648,11 +648,10 @@ async function registrarIngreso(id, tipo, nombre, cel, exigirLugar){
       if(!geo.lat) return {ok:false, error:'🚫 No se pudo obtener tu ubicación GPS. Actívala e inténtalo de nuevo.'};
       const snapLugar = await db.ref('asistencia_lugares/'+lugarKey).once('value');
       const cfgLugar = snapLugar.val();
-      if(cfgLugar){
-        const dist = distanciaMetros(parseFloat(geo.lat), parseFloat(geo.lng), cfgLugar.lat, cfgLugar.lng);
-        if(dist > (cfgLugar.radio||120)){
-          return {ok:false, error:'🚫 Estás a '+Math.round(dist)+'m de "'+cfgLugar.nombre+'". Debes estar en el lugar para registrar.'};
-        }
+      if(!cfgLugar) return {ok:false, error:'🚫 Este lugar ya no tiene ubicación configurada. Recarga la página e inténtalo de nuevo.'};
+      const dist = distanciaMetros(parseFloat(geo.lat), parseFloat(geo.lng), cfgLugar.lat, cfgLugar.lng);
+      if(dist > (cfgLugar.radio||120)){
+        return {ok:false, error:'🚫 Estás a '+Math.round(dist)+'m de "'+cfgLugar.nombre+'". Debes estar en el lugar para registrar.'};
       }
     }
 
@@ -1415,14 +1414,18 @@ function compartirQR(){
         const keyLugar = decodeURIComponent(lugar||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
         const snapLugar = await dbPub.ref('asistencia_lugares/'+keyLugar).once('value');
         const cfgLugar = snapLugar.val();
-        if(cfgLugar){
-          const dist = distanciaMetros(geoLatPub, geoLngPub, cfgLugar.lat, cfgLugar.lng);
-          if(dist > (cfgLugar.radio||120)){
-            err.textContent='🚫 Estás a '+Math.round(dist)+'m de "'+cfgLugar.nombre+'". Debes estar en el lugar para registrar.';
-            err.classList.add('show'); return;
-          }
+        if(!cfgLugar){
+          err.textContent='🚫 Este lugar ("'+decodeURIComponent(lugar||'')+'") no tiene ubicación GPS configurada. Pide al administrador que lo registre.';
+          err.classList.add('show'); return;
         }
-      }catch(e){}
+        const dist = distanciaMetros(geoLatPub, geoLngPub, cfgLugar.lat, cfgLugar.lng);
+        if(dist > (cfgLugar.radio||120)){
+          err.textContent='🚫 Estás a '+Math.round(dist)+'m de "'+cfgLugar.nombre+'". Debes estar en el lugar para registrar.';
+          err.classList.add('show'); return;
+        }
+      }catch(e){
+        err.textContent='🚫 Error al validar ubicación. Intenta de nuevo.'; err.classList.add('show'); return;
+      }
 
       // Verificar duplicado
       const yaSnap = await dbPub.ref('asistencia/'+hoy+'/'+safeId).once('value');

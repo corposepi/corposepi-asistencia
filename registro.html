@@ -219,18 +219,18 @@ async function verificarUbicacion(){
   if(!geoLat||!geoLng){
     return {ok:false, motivo:'No se pudo obtener tu ubicación GPS. Activa la ubicación en tu celular e inténtalo de nuevo.'};
   }
-  if(!db) return {ok:true}; // sin conexión, no bloquear (ya se validó antes que haya conexión para registrar)
+  if(!db) return {ok:false, motivo:'Sin conexión, no se puede validar tu ubicación.'};
   try{
     const key = lugar.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
     const snap = await db.ref('asistencia_lugares/'+key).once('value');
     const cfg = snap.val();
-    if(!cfg) return {ok:true}; // lugar sin ubicación configurada: no se exige geocerca
+    if(!cfg) return {ok:false, motivo:'Este lugar ("'+lugar+'") no tiene una ubicación GPS configurada. Pide al administrador que lo registre en el panel antes de usar este QR.'};
     const dist = distanciaMetros(parseFloat(geoLat), parseFloat(geoLng), cfg.lat, cfg.lng);
     if(dist > (cfg.radio||120)){
       return {ok:false, motivo:'Estás a '+Math.round(dist)+'m de "'+cfg.nombre+'". Debes estar en el lugar para registrar tu asistencia.'};
     }
     return {ok:true};
-  }catch(e){ return {ok:true}; }
+  }catch(e){ return {ok:false, motivo:'Error al validar la ubicación. Intenta de nuevo.'}; }
 }
 
 async function verificarDiaHabil(){
