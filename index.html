@@ -495,7 +495,7 @@ function iniciarApp(resEstudiante){
   setInterval(verificar2PM, 60000);
 
   // Cargar reporte del día
-  const hoy = new Date().toISOString().slice(0,10);
+  const hoy = new Date().toLocaleDateString('en-CA');
   document.getElementById('filt-fecha').value = hoy;
   if(userRole==='admin'){ cargarReporte(); }
 
@@ -564,7 +564,7 @@ async function verificarDiaHabil(fechaISO, diaSemanaNum){
 async function registrarIngreso(id, tipo, nombre, cel){
   try{
     const ahora = new Date();
-    const hoy   = ahora.toISOString().slice(0,10);
+    const hoy   = ahora.toLocaleDateString('en-CA');
     const hora  = ahora.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
     const safeId= id.replace(/[^a-z0-9]/gi,'-');
     const geo   = getGeo();
@@ -572,6 +572,13 @@ async function registrarIngreso(id, tipo, nombre, cel){
     const chequeoDia = await verificarDiaHabil(hoy, ahora.getDay());
     if(!chequeoDia.habil){
       return {ok:false, error:'🚫 '+chequeoDia.motivo+' No se registra asistencia.'};
+    }
+
+    // Fuera del horario escolar (antes de 5:00am o después de 3:00pm) no se permite registrar
+    // ingreso — evita que alguien "llegue" de noche y le apliquen tardanza grave sin sentido.
+    const minutosAhora = ahora.getHours()*60 + ahora.getMinutes();
+    if(minutosAhora < 5*60 || minutosAhora > 15*60){
+      return {ok:false, error:'🚫 Fuera del horario de registro de asistencia (5:00am–3:00pm). Si llegaste tarde y no alcanzaste a registrar, comunícate con administración: 3208331239.'};
     }
 
     if(db){
@@ -677,7 +684,7 @@ function mostrarResultado(res){
     document.getElementById('r-name').textContent = '⚠️ Ya registrado';
     document.getElementById('r-tipo').textContent  = res.nombre;
     document.getElementById('r-hora').textContent  = res.hora;
-    document.getElementById('r-fecha').textContent = new Date().toISOString().slice(0,10);
+    document.getElementById('r-fecha').textContent = new Date().toLocaleDateString('en-CA');
     document.getElementById('r-loc').textContent   = '—';
     document.getElementById('r-prow').style.display='none';
     document.getElementById('r-frow').style.display='none';
@@ -801,7 +808,7 @@ let pm2Ejecutado = false;
 
 async function verificar2PM(){
   const ahora = new Date();
-  const hoy   = ahora.toISOString().slice(0,10);
+  const hoy   = ahora.toLocaleDateString('en-CA');
   const minutos = ahora.getHours()*60 + ahora.getMinutes();
   const clave = 'pm2_'+hoy;
 
@@ -819,7 +826,7 @@ async function verificar2PM(){
 
 async function ejecutar2PM(){
   const ahoraChk = new Date();
-  const hoy = ahoraChk.toISOString().slice(0,10);
+  const hoy = ahoraChk.toLocaleDateString('en-CA');
   const status = document.getElementById('pm-status');
   const body   = document.getElementById('pm-body');
   if(status) status.textContent = '⏳ Procesando...';
@@ -1110,7 +1117,7 @@ function compartirQR(){
       err.classList.remove('show');
 
       const ahora  = new Date();
-      const hoy    = ahora.toISOString().slice(0,10);
+      const hoy    = ahora.toLocaleDateString('en-CA');
       const hora   = ahora.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
       const safeId = id.replace(/[^a-z0-9]/gi,'-');
 

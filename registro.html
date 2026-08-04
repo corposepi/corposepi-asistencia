@@ -171,7 +171,7 @@ try{
 const params = new URLSearchParams(window.location.search);
 const lugar  = decodeURIComponent(params.get('lugar')||'CORPOSEPI');
 const ahora  = new Date();
-const hoy    = ahora.toISOString().slice(0,10);
+const hoy    = ahora.toLocaleDateString('en-CA');
 
 document.getElementById('lugar-nombre').textContent = '📍 '+lugar;
 document.getElementById('lugar-fecha').textContent  =
@@ -224,18 +224,23 @@ async function verificarDiaHabil(){
     return {habil:true};
   }catch(e){ return {habil:true}; }
 }
+function _mostrarAvisoBloqueo(titulo, motivo){
+  document.getElementById('form-wrap').style.display='none';
+  document.querySelector('.gps-bar').style.display='none';
+  const card = document.querySelector('.card');
+  const aviso = document.createElement('div');
+  aviso.style.cssText='text-align:center;padding:1.5rem 0;';
+  aviso.innerHTML = '<div style="font-size:2.5rem;margin-bottom:.75rem;">📴</div>'+
+    '<div style="font-size:1rem;font-weight:800;margin-bottom:.5rem;">'+titulo+'</div>'+
+    '<div style="font-size:.8rem;color:var(--muted);line-height:1.6;">'+motivo+'<br>No se puede registrar asistencia.</div>';
+  card.appendChild(aviso);
+}
 (async()=>{
   const chequeo = await verificarDiaHabil();
-  if(!chequeo.habil){
-    document.getElementById('form-wrap').style.display='none';
-    document.querySelector('.gps-bar').style.display='none';
-    const card = document.querySelector('.card');
-    const aviso = document.createElement('div');
-    aviso.style.cssText='text-align:center;padding:1.5rem 0;';
-    aviso.innerHTML = '<div style="font-size:2.5rem;margin-bottom:.75rem;">📴</div>'+
-      '<div style="font-size:1rem;font-weight:800;margin-bottom:.5rem;">Hoy no hay clases</div>'+
-      '<div style="font-size:.8rem;color:var(--muted);line-height:1.6;">'+chequeo.motivo+'<br>No se puede registrar asistencia.</div>';
-    card.appendChild(aviso);
+  if(!chequeo.habil){ _mostrarAvisoBloqueo('Hoy no hay clases', chequeo.motivo); return; }
+  const minutosAhora = ahora.getHours()*60 + ahora.getMinutes();
+  if(minutosAhora < 5*60 || minutosAhora > 15*60){
+    _mostrarAvisoBloqueo('Fuera de horario', 'El registro de asistencia solo está disponible entre 5:00am y 3:00pm. Si llegaste tarde, comunícate con administración: 3208331239.');
   }
 })();
 
@@ -260,6 +265,13 @@ async function registrar(){
 
   const chequeoDia = await verificarDiaHabil();
   if(!chequeoDia.habil){ err.textContent='🚫 '+chequeoDia.motivo+' No se registra asistencia.'; err.classList.add('show'); return; }
+
+  const minutosAhora = ahora.getHours()*60 + ahora.getMinutes();
+  if(minutosAhora < 5*60 || minutosAhora > 15*60){
+    err.textContent='🚫 Fuera del horario de registro de asistencia (5:00am–3:00pm). Si llegaste tarde y no alcanzaste a registrar, comunícate con administración: 3208331239.';
+    err.classList.add('show');
+    return;
+  }
 
   // Mostrar loader
   document.getElementById('form-wrap').style.display='none';
