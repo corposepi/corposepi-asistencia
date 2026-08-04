@@ -205,6 +205,33 @@ function lunesDeSemana(fechaISO){
   d.setDate(d.getDate()+diff);
   return d.toLocaleDateString('en-CA');
 }
+// Distancia en metros entre dos coordenadas (fórmula de Haversine)
+function distanciaMetros(lat1,lng1,lat2,lng2){
+  const R = 6371000;
+  const toRad = d=>d*Math.PI/180;
+  const dLat = toRad(lat2-lat1), dLng = toRad(lng2-lng1);
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLng/2)**2;
+  return R * 2*Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+async function verificarUbicacion(){
+  if(!geoLat||!geoLng){
+    return {ok:false, motivo:'No se pudo obtener tu ubicación GPS. Activa la ubicación en tu celular e inténtalo de nuevo.'};
+  }
+  if(!db) return {ok:true}; // sin conexión, no bloquear (ya se validó antes que haya conexión para registrar)
+  try{
+    const key = lugar.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
+    const snap = await db.ref('asistencia_lugares/'+key).once('value');
+    const cfg = snap.val();
+    if(!cfg) return {ok:true}; // lugar sin ubicación configurada: no se exige geocerca
+    const dist = distanciaMetros(parseFloat(geoLat), parseFloat(geoLng), cfg.lat, cfg.lng);
+    if(dist > (cfg.radio||120)){
+      return {ok:false, motivo:'Estás a '+Math.round(dist)+'m de "'+cfg.nombre+'". Debes estar en el lugar para registrar tu asistencia.'};
+    }
+    return {ok:true};
+  }catch(e){ return {ok:true}; }
+}
+
 async function verificarDiaHabil(){
   const dow = ahora.getDay();
   if(dow===0) return {habil:false, motivo:'Hoy es domingo, no hay clases.'};
@@ -269,6 +296,14 @@ async function registrar(){
   const minutosAhora = ahora.getHours()*60 + ahora.getMinutes();
   if(minutosAhora < 5*60 || minutosAhora > 15*60){
     err.textContent='🚫 Fuera del horario de registro de asistencia (5:00am–3:00pm). Si llegaste tarde y no alcanzaste a registrar, comunícate con administración: 3208331239.';
+    err.classList.add('show');
+    return;
+  }
+
+  // Verificar que esté físicamente cerca del lugar (evita registrar desde una foto del QR)
+  const chequeoUbicacion = await verificarUbicacion();
+  if(!chequeoUbicacion.ok){
+    err.textContent='🚫 '+chequeoUbicacion.motivo;
     err.classList.add('show');
     return;
   }

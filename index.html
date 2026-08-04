@@ -317,10 +317,31 @@ td{padding:.45rem .6rem;border-bottom:1px solid var(--dark3);vertical-align:midd
   <div class="tab-content" id="tab-qr">
     <div class="qr-wrap">
 
+      <!-- Gestión de lugares (ubicación GPS) -->
+      <div class="qr-card">
+        <div class="qr-card-title">📍 Lugares registrados</div>
+        <div style="font-size:.68rem;color:var(--muted,#888);margin-bottom:.6rem;">Cada lugar guarda su ubicación GPS. El registro de asistencia solo se acepta a unos ~120 metros de este punto.</div>
+        <div id="lugares-lista" style="margin-bottom:.75rem;">Cargando...</div>
+        <div style="border-top:1px solid rgba(255,255,255,.08);padding-top:.75rem;margin-top:.5rem;">
+          <div class="qr-card-title" style="font-size:.8rem;">➕ Agregar nuevo lugar</div>
+          <input class="qr-inp" id="lug-nombre" placeholder="Nombre del lugar (ej: Entrada principal, Sede Norte)"/>
+          <div style="display:flex;gap:.5rem;margin:.5rem 0;">
+            <input class="qr-inp" id="lug-lat" placeholder="Latitud" style="flex:1;" readonly/>
+            <input class="qr-inp" id="lug-lng" placeholder="Longitud" style="flex:1;" readonly/>
+          </div>
+          <button class="qr-btn-sec" onclick="capturarUbicacionLugar()" style="width:100%;margin-bottom:.5rem;">📍 Usar mi ubicación actual (párate en el sitio)</button>
+          <div style="display:flex;gap:.5rem;align-items:center;margin-bottom:.6rem;">
+            <label style="font-size:.72rem;color:var(--muted,#888);white-space:nowrap;">Margen (m):</label>
+            <input class="qr-inp" id="lug-radio" type="number" value="120" style="flex:1;"/>
+          </div>
+          <button class="qr-btn" onclick="guardarLugar()" style="width:100%;">💾 Guardar lugar</button>
+        </div>
+      </div>
+
       <!-- Generador -->
       <div class="qr-card">
         <div class="qr-card-title">🖨️ Generar QR de asistencia</div>
-        <input class="qr-inp" id="qr-lugar" placeholder="Nombre del lugar (ej: Entrada principal, Salón 4A)"/>
+        <select class="qr-inp" id="qr-lugar-select"><option value="">— Selecciona un lugar guardado —</option></select>
         <button class="qr-btn" onclick="generarQR()">⚡ Generar QR</button>
       </div>
 
@@ -514,6 +535,7 @@ function showTab(t, el){
   document.querySelectorAll('.tab-content').forEach(x=>x.classList.remove('active'));
   document.getElementById('tab-'+t).classList.add('active');
   if(t==='rep') cargarReporte();
+  if(t==='qr') cargarLugares();
 }
 
 // ══ GEOLOCALIZACIÓN — captura instantánea ══
@@ -998,12 +1020,91 @@ function exportCSV(){
 // ══ BASE APP URL ══
 const BASE_ASISTENCIA = 'https://corposepi.github.io/corposepi-asistencia/registro.html';
 
+// ══ LUGARES (ubicación GPS) ══
+let _lugarCapturado = null;
+
+function capturarUbicacionLugar(){
+  if(!navigator.geolocation){ showToast('⚠️ GPS no soportado en este dispositivo'); return; }
+  showToast('📍 Obteniendo tu ubicación...');
+  navigator.geolocation.getCurrentPosition(
+    p=>{
+      _lugarCapturado = {lat:p.coords.latitude, lng:p.coords.longitude, acc:Math.round(p.coords.accuracy)};
+      document.getElementById('lug-lat').value = _lugarCapturado.lat.toFixed(6);
+      document.getElementById('lug-lng').value = _lugarCapturado.lng.toFixed(6);
+      showToast('✅ Ubicación capturada (±'+_lugarCapturado.acc+'m de precisión)');
+    },
+    e=>{ showToast('⚠️ No se pudo obtener tu ubicación: '+e.message); },
+    {enableHighAccuracy:true, timeout:15000}
+  );
+}
+
+async function guardarLugar(){
+  const nombre = document.getElementById('lug-nombre').value.trim();
+  const lat = parseFloat(document.getElementById('lug-lat').value);
+  const lng = parseFloat(document.getElementById('lug-lng').value);
+  const radio = parseFloat(document.getElementById('lug-radio').value)||120;
+  if(!nombre){ showToast('⚠️ Ingresa un nombre para el lugar'); return; }
+  if(isNaN(lat)||isNaN(lng)){ showToast('⚠️ Primero captura la ubicación GPS parado en el sitio'); return; }
+  if(!db){ showToast('⚠️ Sin conexión Firebase'); return; }
+  const key = nombre.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
+  await db.ref('asistencia_lugares/'+key).set({nombre, lat, lng, radio});
+  showToast('✅ Lugar guardado: '+nombre);
+  document.getElementById('lug-nombre').value='';
+  document.getElementById('lug-lat').value='';
+  document.getElementById('lug-lng').value='';
+  document.getElementById('lug-radio').value='120';
+  _lugarCapturado=null;
+  cargarLugares();
+}
+
+async function eliminarLugar(key){
+  if(!confirm('¿Eliminar este lugar? Los QR ya impresos para él dejarán de funcionar.')) return;
+  await db.ref('asistencia_lugares/'+key).remove();
+  showToast('🗑️ Lugar eliminado');
+  cargarLugares();
+}
+
+async function cargarLugares(){
+  const lista = document.getElementById('lugares-lista');
+  const select = document.getElementById('qr-lugar-select');
+  if(!db||!lista) return;
+  const snap = await db.ref('asistencia_lugares').once('value');
+  const data = snap.val()||{};
+  const claves = Object.keys(data);
+  if(!claves.length){
+    lista.innerHTML = '<div style="font-size:.72rem;color:var(--muted,#888);">Sin lugares guardados todavía.</div>';
+  } else {
+    lista.innerHTML = claves.map(k=>{
+      const l = data[k];
+      return `<div style="display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.04);border-radius:8px;padding:.5rem .75rem;margin-bottom:.4rem;font-size:.75rem;">
+        <div><strong>${l.nombre}</strong><br><span style="color:var(--muted,#888);font-size:.65rem;">${l.lat.toFixed(5)}, ${l.lng.toFixed(5)} · margen ${l.radio}m</span></div>
+        <button onclick="eliminarLugar('${k}')" style="background:none;border:none;color:#f87171;cursor:pointer;font-size:.85rem;">🗑️</button>
+      </div>`;
+    }).join('');
+  }
+  if(select){
+    select.innerHTML = '<option value="">— Selecciona un lugar guardado —</option>'+
+      claves.map(k=>`<option value="${k}">${data[k].nombre}</option>`).join('');
+  }
+}
+
+// Distancia en metros entre dos coordenadas (fórmula de Haversine)
+function distanciaMetros(lat1,lng1,lat2,lng2){
+  const R = 6371000;
+  const toRad = d=>d*Math.PI/180;
+  const dLat = toRad(lat2-lat1), dLng = toRad(lng2-lng1);
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLng/2)**2;
+  return R * 2*Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
 // ══ GENERAR QR ══
 let qrURL = '';
 let qrLugar = '';
 
 function generarQR(){
-  const lugar = document.getElementById('qr-lugar').value.trim() || 'CORPOSEPI';
+  const key = document.getElementById('qr-lugar-select').value;
+  if(!key){ showToast('⚠️ Selecciona un lugar guardado (o créalo arriba primero)'); return; }
+  const lugar = document.getElementById('qr-lugar-select').selectedOptions[0].textContent;
   qrLugar = lugar;
   // URL que abre la página de registro con param lugar
   qrURL = BASE_ASISTENCIA + '?lugar=' + encodeURIComponent(lugar);
@@ -1121,6 +1222,37 @@ function compartirQR(){
       const hora   = ahora.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
       const safeId = id.replace(/[^a-z0-9]/gi,'-');
 
+      const chequeoDia = await verificarDiaHabil(hoy, ahora.getDay());
+      if(!chequeoDia.habil){ err.textContent='🚫 '+chequeoDia.motivo+' No se registra asistencia.'; err.classList.add('show'); return; }
+
+      const minutosAhora = ahora.getHours()*60+ahora.getMinutes();
+      if(minutosAhora<5*60||minutosAhora>15*60){
+        err.textContent='🚫 Fuera del horario de registro (5:00am–3:00pm). Comunícate con administración: 3208331239.';
+        err.classList.add('show'); return;
+      }
+
+      // Verificar ubicación GPS contra el lugar guardado
+      let geoLatPub='', geoLngPub='';
+      try{
+        await new Promise(res=>navigator.geolocation.getCurrentPosition(
+          p=>{geoLatPub=p.coords.latitude;geoLngPub=p.coords.longitude;res();},
+          ()=>res(),{timeout:8000,enableHighAccuracy:true}
+        ));
+      }catch(e){}
+      if(!geoLatPub){ err.textContent='🚫 No se pudo obtener tu ubicación GPS. Actívala e inténtalo de nuevo.'; err.classList.add('show'); return; }
+      try{
+        const keyLugar = decodeURIComponent(lugar||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
+        const snapLugar = await dbPub.ref('asistencia_lugares/'+keyLugar).once('value');
+        const cfgLugar = snapLugar.val();
+        if(cfgLugar){
+          const dist = distanciaMetros(geoLatPub, geoLngPub, cfgLugar.lat, cfgLugar.lng);
+          if(dist > (cfgLugar.radio||120)){
+            err.textContent='🚫 Estás a '+Math.round(dist)+'m de "'+cfgLugar.nombre+'". Debes estar en el lugar para registrar.';
+            err.classList.add('show'); return;
+          }
+        }
+      }catch(e){}
+
       // Verificar duplicado
       const yaSnap = await dbPub.ref('asistencia/'+hoy+'/'+safeId).once('value');
       if(yaSnap.val()){
@@ -1145,14 +1277,8 @@ function compartirQR(){
       if(pena.penalidad>0 && idx>=0)
         await dbPub.ref('corposepi/students/'+idx+'/fnx').set(fnxNuevo.toFixed(2));
 
-      // GPS
-      let lat='',lng='',acc='';
-      try{
-        await new Promise(res=>navigator.geolocation.getCurrentPosition(
-          p=>{lat=p.coords.latitude.toFixed(6);lng=p.coords.longitude.toFixed(6);acc=Math.round(p.coords.accuracy);res();},
-          ()=>res(),{timeout:6000,enableHighAccuracy:true}
-        ));
-      }catch(e){}
+      // GPS (ya capturado y validado arriba contra el lugar)
+      const lat=geoLatPub.toFixed(6), lng=geoLngPub.toFixed(6), acc='';
 
       const reg = {
         id, tipo:'student', nombre:est.nombres+' '+est.apellidos,
