@@ -144,6 +144,7 @@ html,body{min-height:100vh;font-family:'Montserrat',sans-serif;
     <div class="res-rows" id="res-rows"></div>
     <div class="res-note" id="res-note"></div>
     <div class="wa-sent" id="wa-sent" style="display:none">📱 Notificación enviada a tu familia</div>
+    <button class="btn" style="margin-top:1rem;" onclick="registrarOtro()">➕ Registrar otro estudiante</button>
   </div>
 
 </div>
@@ -487,6 +488,15 @@ function mostrarError(msg){
   const err = document.getElementById('err-msg');
   err.textContent = msg;
   err.classList.add('show');
+}
+
+function registrarOtro(){
+  document.getElementById('result').style.display='none';
+  document.getElementById('wa-sent').style.display='none';
+  document.getElementById('inp-id').value='';
+  document.getElementById('inp-doc').value='';
+  document.getElementById('form-wrap').style.display='block';
+  document.getElementById('inp-id').focus();
 }
 
 function fila(label, valor, cls=''){
