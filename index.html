@@ -165,6 +165,7 @@ td{padding:.45rem .6rem;border-bottom:1px solid var(--dark3);vertical-align:midd
     <div class="login-tabs">
       <div class="ltab adm active" onclick="switchTab('adm',this)">⚙️ Admin</div>
       <div class="ltab doc" onclick="switchTab('doc',this)">👩‍🏫 Docente</div>
+      <div class="ltab est" onclick="switchTab('est',this)">🎓 Estudiante</div>
     </div>
 
     <!-- Admin -->
@@ -180,6 +181,15 @@ td{padding:.45rem .6rem;border-bottom:1px solid var(--dark3);vertical-align:midd
       <input class="li" id="doc-id" placeholder="Tu ID (ej: CORP-P-001)" onkeydown="if(event.key==='Enter')loginDocente()"/>
       <input class="li" id="doc-ndoc" placeholder="Número de documento" onkeydown="if(event.key==='Enter')loginDocente()"/>
       <button class="lbtn" onclick="loginDocente()">Ingresar</button>
+    </div>
+
+    <!-- Estudiante (solo consulta de su historial, NO registra asistencia aquí) -->
+    <div id="lf-est" class="lform" style="display:none">
+      <div class="lerr" id="err-est">ID o documento incorrecto.</div>
+      <input class="li" id="est-id" placeholder="Tu ID (ej: CORP-2025-0001)" onkeydown="if(event.key==='Enter')loginEstudianteHistorial()"/>
+      <input class="li" id="est-ndoc" placeholder="Número de documento" onkeydown="if(event.key==='Enter')loginEstudianteHistorial()"/>
+      <button class="lbtn" onclick="loginEstudianteHistorial()">Ver mi historial de asistencia</button>
+      <div class="lnote">Aquí solo consultas tu historial. El registro de asistencia se hace escaneando el QR del lugar.<br>📞 3208331239 · corposepi.org</div>
     </div>
 
   </div>
@@ -325,7 +335,7 @@ td{padding:.45rem .6rem;border-bottom:1px solid var(--dark3);vertical-align:midd
       </div>
       <div class="rep-table">
         <table>
-          <thead><tr><th>Fecha</th><th>Día</th><th>Estado</th><th>Hora registro</th><th>Lugar</th></tr></thead>
+          <thead><tr><th>Fecha</th><th>Día</th><th>Estado</th><th>Hora registro</th><th>FNX Δ</th><th>Lugar</th></tr></thead>
           <tbody id="doc-rep-body"></tbody>
         </table>
       </div>
@@ -452,7 +462,7 @@ function iniciarGeo(){
 function switchTab(t, el){
   document.querySelectorAll('.ltab').forEach(x=>x.classList.remove('active'));
   el.classList.add('active');
-  ['adm','doc'].forEach(id=>document.getElementById('lf-'+id).style.display='none');
+  ['adm','doc','est'].forEach(id=>document.getElementById('lf-'+id).style.display='none');
   document.getElementById('lf-'+t).style.display='flex';
 }
 
@@ -483,6 +493,21 @@ async function loginDocente(){
   iniciarApp();
 }
 
+async function loginEstudianteHistorial(){
+  const id  = document.getElementById('est-id').value.trim().toUpperCase();
+  const doc = document.getElementById('est-ndoc').value.trim();
+  const err = document.getElementById('err-est');
+  if(!id||!doc){ err.textContent='Ingresa ID y documento.'; err.classList.add('show'); return; }
+  if(!db){ err.textContent='Sin conexión.'; err.classList.add('show'); return; }
+  const snap = await db.ref('corposepi/students').once('value');
+  const students = snap.val()||[];
+  const s = students.find(x=>x&&x.id===id&&String(x.numdoc)===String(doc));
+  if(!s){ err.textContent='ID o documento incorrecto.'; err.classList.add('show'); return; }
+  err.classList.remove('show');
+  userRole='estudiante'; userNombre=s.nombres+' '+(s.apellidos||''); userObj=s;
+  // Solo consulta su historial — NO se registra asistencia aquí (eso solo por QR físico).
+  iniciarApp();
+}
 
 function iniciarApp(resEstudiante){
   document.getElementById('login-screen').style.display='none';
@@ -506,24 +531,18 @@ function iniciarApp(resEstudiante){
     // sin QR (eso lo crea/gestiona únicamente el admin), sin el reporte general del día, sin 2PM.
     tabQR.style.display='none'; tabPM.style.display='none'; tabRep.style.display='none';
     tabScan.style.display='block'; tabDoc.style.display='block';
+  } else if(userRole==='estudiante'){
+    // El estudiante solo consulta su propio historial — no escanea, no ve reportes de otros.
+    tabQR.style.display='none'; tabPM.style.display='none'; tabRep.style.display='none'; tabScan.style.display='none';
+    tabDoc.style.display='block';
+    document.querySelectorAll('.tab-content').forEach(x=>x.classList.remove('active'));
+    document.getElementById('tab-doc').classList.add('active');
+    document.getElementById('app').style.overflow='auto';
   } else {
-    tabPM.style.display='none'; tabQR.style.display='none'; tabDoc.style.display='none';
+    tabPM.style.display='none'; tabQR.style.display='none'; tabDoc.style.display='none'; tabRep.style.display='none'; tabScan.style.display='none';
   }
   cargarLugares();
-
-  // El estudiante solo ve su resultado, no puede escanear a otros
-  if(userRole==='estudiante'){
-    document.getElementById('tab-btn-scan').style.display='none';
-    document.getElementById('tab-btn-rep').style.display='none';
-    if(resEstudiante) mostrarResultado(resEstudiante);
-    document.getElementById('app').style.overflow='auto';
-    document.getElementById('tab-scan').style.display='flex';
-    document.getElementById('tab-scan').classList.add('active');
-    document.querySelector('.cam-box').style.display='none';
-    document.getElementById('btn-cam').style.display='none';
-    document.querySelector('.manual-card').style.display='none';
-    document.querySelector('.loc-bar').style.display='none';
-  }
+  if(userRole==='estudiante') cargarSelectDocentes();
 
   iniciarGeo();
   verificar2PM();
@@ -1155,13 +1174,13 @@ async function cargarSelectDocentes(){
     mesInput.value = hoy.getFullYear()+'-'+String(hoy.getMonth()+1).padStart(2,'0');
   }
 
-  if(userRole==='docente'){
-    // El docente solo ve su propio reporte, sin poder elegir a otros
+  if(userRole==='docente'||userRole==='estudiante'){
+    // El docente/estudiante solo ve su propio reporte, sin poder elegir a otro
     sel.style.display='none';
     sel.innerHTML = `<option value="${userObj.id}">${userObj.nombres} ${userObj.apellidos||''}</option>`;
     sel.value = userObj.id;
     const titulo = document.getElementById('doc-rep-titulo');
-    if(titulo) titulo.textContent = '👩‍🏫 Mi asistencia mensual';
+    if(titulo) titulo.textContent = userRole==='docente' ? '👩‍🏫 Mi asistencia mensual' : '🎓 Mi historial de asistencia';
     cargarReporteDocente();
     return;
   }
@@ -1202,7 +1221,7 @@ async function cargarReporteDocente(){
   const diasEnMes = new Date(anio, mesNum, 0).getDate();
   const nombresDia = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
 
-  let diasHabiles=0, diasAsistio=0;
+  let diasHabiles=0, diasAsistio=0, fnxTotal=0;
   const filas=[];
 
   for(let d=1; d<=diasEnMes; d++){
@@ -1221,22 +1240,32 @@ async function cargarReporteDocente(){
 
     diasHabiles++;
     const snapAs = await db.ref('asistencia/'+fecha+'/').once('value');
-    let registroDoc = null;
-    snapAs.forEach(c=>{ const v=c.val(); if(v && v.id===docId && v.tipo==='staff') registroDoc = v; });
+    let registro = null;
+    snapAs.forEach(c=>{ const v=c.val(); if(v && v.id===docId && (v.tipo==='staff'||v.tipo==='student')) registro = v; });
 
-    if(registroDoc) diasAsistio++;
+    if(registro) diasAsistio++;
+    if(registro) fnxTotal += parseFloat(registro.penalidad_fnx||0);
+
+    let estadoTxt = '<span style="color:#f87171;">❌ No registró</span>';
+    if(registro){
+      if(registro.tipo==='staff') estadoTxt = '<span style="color:#4ade80;">✅ Asistió</span>';
+      else estadoTxt = registro.etiqueta || '<span style="color:#4ade80;">✅ Asistió</span>';
+    }
+
     filas.push(`<tr>
       <td>${fecha}</td>
       <td>${nombresDia[dow]}</td>
-      <td>${registroDoc?'<span style="color:#4ade80;">✅ Asistió</span>':'<span style="color:#f87171;">❌ No registró</span>'}</td>
-      <td>${registroDoc?registroDoc.hora:'—'}</td>
-      <td>${registroDoc?(registroDoc.lugar||'—'):'—'}</td>
+      <td>${estadoTxt}</td>
+      <td>${registro?registro.hora:'—'}</td>
+      <td>${registro&&registro.penalidad_fnx?'<span style="color:#f87171;">-'+registro.penalidad_fnx+'</span>':'—'}</td>
+      <td>${registro?(registro.lugar||'—'):'—'}</td>
     </tr>`);
   }
 
-  body.innerHTML = filas.length ? filas.join('') : '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:1rem;">Sin días hábiles en este mes.</td></tr>';
+  body.innerHTML = filas.length ? filas.join('') : '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:1rem;">Sin días hábiles en este mes.</td></tr>';
   const nombreDoc = document.getElementById('doc-rep-select').selectedOptions[0]?.textContent||'';
-  resumen.innerHTML = `<strong>${nombreDoc}</strong> · ${diasHabiles} días hábiles en el mes · <span style="color:#4ade80;">${diasAsistio} asistidos</span> · <span style="color:#f87171;">${diasHabiles-diasAsistio} sin registrar</span>`;
+  resumen.innerHTML = `<strong>${nombreDoc}</strong> · ${diasHabiles} días hábiles en el mes · <span style="color:#4ade80;">${diasAsistio} asistidos</span> · <span style="color:#f87171;">${diasHabiles-diasAsistio} sin registrar</span>`+
+    (fnxTotal>0 ? ` · <span style="color:#f87171;">-${fnxTotal.toFixed(0)} FNX en total</span>` : '');
 }
 
 // ══ GENERAR QR ══
