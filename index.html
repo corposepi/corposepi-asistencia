@@ -315,7 +315,7 @@ td{padding:.45rem .6rem;border-bottom:1px solid var(--dark3);vertical-align:midd
   <div class="tab-content" id="tab-doc">
     <div class="rep-wrap">
       <div style="background:var(--dark3);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:1.25rem;">
-        <div style="font-size:.9rem;font-weight:800;margin-bottom:.85rem;">👩‍🏫 Asistencia mensual por docente</div>
+        <div style="font-size:.9rem;font-weight:800;margin-bottom:.85rem;" id="doc-rep-titulo">👩‍🏫 Asistencia mensual por docente</div>
         <div style="display:flex;gap:.6rem;flex-wrap:wrap;margin-bottom:1rem;">
           <select class="rep-inp" id="doc-rep-select" style="flex:1;min-width:180px;"><option value="">— Selecciona un docente —</option></select>
           <input class="rep-inp" type="month" id="doc-rep-mes" style="max-width:160px;"/>
@@ -494,12 +494,21 @@ function iniciarApp(resEstudiante){
   else { badge.textContent='Estudiante'; badge.className='tb-badge tbb-est'; }
 
   // Tabs según rol
-  const tabPM = document.getElementById('tab-btn-pm');
-  const tabQR = document.getElementById('tab-btn-qr');
+  const tabPM  = document.getElementById('tab-btn-pm');
+  const tabQR  = document.getElementById('tab-btn-qr');
   const tabDoc = document.getElementById('tab-btn-doc');
-  if(userRole==='admin'){ tabPM.style.display='block'; tabQR.style.display='block'; tabDoc.style.display='block'; }
-  else if(userRole==='docente'){ tabQR.style.display='block'; tabPM.style.display='none'; tabDoc.style.display='none'; }
-  else { tabPM.style.display='none'; tabQR.style.display='none'; tabDoc.style.display='none'; }
+  const tabRep = document.getElementById('tab-btn-rep');
+  const tabScan= document.getElementById('tab-btn-scan');
+  if(userRole==='admin'){
+    tabPM.style.display='block'; tabQR.style.display='block'; tabDoc.style.display='block'; tabRep.style.display='block'; tabScan.style.display='block';
+  } else if(userRole==='docente'){
+    // El docente solo ve Escanear (para registrarse/registrar) y su propio reporte mensual —
+    // sin QR (eso lo crea/gestiona únicamente el admin), sin el reporte general del día, sin 2PM.
+    tabQR.style.display='none'; tabPM.style.display='none'; tabRep.style.display='none';
+    tabScan.style.display='block'; tabDoc.style.display='block';
+  } else {
+    tabPM.style.display='none'; tabQR.style.display='none'; tabDoc.style.display='none';
+  }
   cargarLugares();
 
   // El estudiante solo ve su resultado, no puede escanear a otros
@@ -1138,17 +1147,31 @@ function distanciaMetros(lat1,lng1,lat2,lng2){
 async function cargarSelectDocentes(){
   const sel = document.getElementById('doc-rep-select');
   if(!sel||!db) return;
-  const snap = await db.ref('corposepi/staff').once('value');
-  const raw = snap.val();
-  const lista = Array.isArray(raw)?raw.filter(Boolean):Object.values(raw||{}).filter(Boolean);
-  sel.innerHTML = '<option value="">— Selecciona un docente —</option>'+
-    lista.map(s=>`<option value="${s.id}">${s.nombres} ${s.apellidos||''}</option>`).join('');
+
   // Mes actual por defecto
   const mesInput = document.getElementById('doc-rep-mes');
   if(mesInput && !mesInput.value){
     const hoy = new Date();
     mesInput.value = hoy.getFullYear()+'-'+String(hoy.getMonth()+1).padStart(2,'0');
   }
+
+  if(userRole==='docente'){
+    // El docente solo ve su propio reporte, sin poder elegir a otros
+    sel.style.display='none';
+    sel.innerHTML = `<option value="${userObj.id}">${userObj.nombres} ${userObj.apellidos||''}</option>`;
+    sel.value = userObj.id;
+    const titulo = document.getElementById('doc-rep-titulo');
+    if(titulo) titulo.textContent = '👩‍🏫 Mi asistencia mensual';
+    cargarReporteDocente();
+    return;
+  }
+
+  sel.style.display='';
+  const snap = await db.ref('corposepi/staff').once('value');
+  const raw = snap.val();
+  const lista = Array.isArray(raw)?raw.filter(Boolean):Object.values(raw||{}).filter(Boolean);
+  sel.innerHTML = '<option value="">— Selecciona un docente —</option>'+
+    lista.map(s=>`<option value="${s.id}">${s.nombres} ${s.apellidos||''}</option>`).join('');
 }
 
 function lunesDeSemanaRep(fechaISO){
