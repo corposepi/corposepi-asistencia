@@ -212,6 +212,7 @@ td{padding:.45rem .6rem;border-bottom:1px solid var(--dark3);vertical-align:midd
     <div class="tab" id="tab-btn-qr" onclick="showTab('qr',this)" style="display:none">🖨️ QR</div>
     <div class="tab" id="tab-btn-pm" onclick="showTab('pm',this)" style="display:none">🕑 2PM</div>
     <div class="tab" id="tab-btn-doc" onclick="showTab('doc',this)" style="display:none">👩‍🏫 Docentes</div>
+    <div class="tab" id="tab-btn-rank" onclick="showTab('rank',this)" style="display:none">🏆 Ranking</div>
   </div>
 
   <!-- TAB ESCANEAR -->
@@ -337,6 +338,31 @@ td{padding:.45rem .6rem;border-bottom:1px solid var(--dark3);vertical-align:midd
         <table>
           <thead><tr><th>Fecha</th><th>Día</th><th>Estado</th><th>Hora registro</th><th>FNX Δ</th><th>Lugar</th></tr></thead>
           <tbody id="doc-rep-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB RANKING DE ASISTENCIA (solo admin) -->
+  <div class="tab-content" id="tab-rank">
+    <div class="rep-wrap">
+      <div style="background:var(--dark3);border:1px solid rgba(251,191,36,.2);border-radius:14px;padding:1.25rem;">
+        <div style="font-size:.9rem;font-weight:800;margin-bottom:.5rem;color:var(--amber)">🏆 Ranking de asistencia</div>
+        <div style="font-size:.72rem;color:var(--muted);line-height:1.7;margin-bottom:1rem;">
+          Ordena a los estudiantes de quien más asiste (menos tiempo efectivo perdido) a quien menos asiste.
+          1 día = 5 horas efectivas (300 min). Los primeros 7 quedan resaltados en dorado y se les puede premiar con 10 CPI cada uno (1 CPI = 1.000 COP, respaldado por la corporación).
+        </div>
+        <div style="display:flex;gap:.6rem;flex-wrap:wrap;margin-bottom:.5rem;">
+          <input class="rep-inp" type="month" id="rank-mes" style="max-width:160px;"/>
+          <button class="rep-btn" onclick="calcularRanking()">🔍 Calcular ranking</button>
+          <button class="lbtn" id="rank-premiar-btn" style="width:auto;padding:.5rem 1.2rem;display:none;" onclick="premiarTop7()">🏆 Premiar top 7 con 10 CPI c/u</button>
+        </div>
+        <div id="rank-status" style="font-size:.72rem;color:var(--muted);margin-top:.5rem;">Selecciona un mes y calcula.</div>
+      </div>
+      <div class="rep-table">
+        <table>
+          <thead><tr><th>#</th><th>Estudiante</th><th>Asistencia</th><th>Tiempo perdido</th><th>A tiempo</th><th>Tardanza</th><th>Ausente</th></tr></thead>
+          <tbody id="rank-body"></tbody>
         </table>
       </div>
     </div>
@@ -524,8 +550,9 @@ function iniciarApp(resEstudiante){
   const tabDoc = document.getElementById('tab-btn-doc');
   const tabRep = document.getElementById('tab-btn-rep');
   const tabScan= document.getElementById('tab-btn-scan');
+  const tabRank= document.getElementById('tab-btn-rank');
   if(userRole==='admin'){
-    tabPM.style.display='block'; tabQR.style.display='block'; tabDoc.style.display='block'; tabRep.style.display='block'; tabScan.style.display='block';
+    tabPM.style.display='block'; tabQR.style.display='block'; tabDoc.style.display='block'; tabRep.style.display='block'; tabScan.style.display='block'; tabRank.style.display='block';
   } else if(userRole==='docente'){
     // El docente solo ve Escanear (para registrarse/registrar) y su propio reporte mensual —
     // sin QR (eso lo crea/gestiona únicamente el admin), sin el reporte general del día, sin 2PM.
@@ -1278,6 +1305,172 @@ async function cargarReporteDocente(){
   const nombreDoc = document.getElementById('doc-rep-select').selectedOptions[0]?.textContent||'';
   resumen.innerHTML = `<strong>${nombreDoc}</strong> · ${diasHabiles} días hábiles en el mes · <span style="color:#4ade80;">${diasAsistio} asistidos</span> · <span style="color:#f87171;">${diasHabiles-diasAsistio} sin registrar</span>`+
     (fnxTotal>0 ? ` · <span style="color:#f87171;">-${fnxTotal.toFixed(0)} FNX en total</span>` : '');
+}
+
+// ══ RANKING DE ASISTENCIA Y PREMIO EN CPI ══
+const MINUTOS_DIA_EFECTIVO_RANK=300; // 5 horas efectivas por día
+const HORA_INICIO_CLASE_RANK=8*60; // 8:00am
+const FECHA_INICIO_SISTEMA_RANK='2026-08-03'; // primer día con el sistema ya funcionando bien
+
+function _rkParseHora(horaStr){
+  if(!horaStr)return null;
+  horaStr=String(horaStr).trim();
+  if(/^\d{1,2}:\d{2}$/.test(horaStr)){
+    const [h,m]=horaStr.split(':').map(Number);
+    return h*60+m;
+  }
+  const match=horaStr.match(/(\d{1,2}):(\d{2})\s*([ap])/i);
+  if(!match)return null;
+  let h=parseInt(match[1]),m=parseInt(match[2]);
+  const esPM=match[3].toLowerCase()==='p';
+  if(esPM&&h!==12)h+=12;
+  if(!esPM&&h===12)h=0;
+  return h*60+m;
+}
+function _rkMinutosPerdidos(reg){
+  if(!reg)return MINUTOS_DIA_EFECTIVO_RANK;
+  if(reg.estado==='P')return 0;
+  if(reg.estado==='A')return MINUTOS_DIA_EFECTIVO_RANK;
+  const minLlegada=_rkParseHora(reg.hora);
+  if(minLlegada==null)return reg.penalidad_fnx>0?60:0;
+  return Math.min(MINUTOS_DIA_EFECTIVO_RANK,Math.max(0,minLlegada-HORA_INICIO_CLASE_RANK));
+}
+function _rkLunesDeSemana(fechaISO){
+  const d=new Date(fechaISO+'T12:00:00');
+  const dow=d.getDay();
+  const diff=dow===0?-6:1-dow;
+  d.setDate(d.getDate()+diff);
+  return d.toLocaleDateString('en-CA');
+}
+async function _rkDiasHabiles(anio,mesNum){
+  const [snapFer,snapSem]=await Promise.all([
+    db.ref('aprende_feriados').once('value'),
+    db.ref('aprende_semanas').once('value'),
+  ]);
+  const feriados=[];snapFer.forEach(c=>{const v=c.val();if(v)feriados.push(v);});
+  const semanasActivas=snapSem.val()||{};
+  const diasEnMes=new Date(anio,mesNum,0).getDate();
+  const hoyStr=new Date().toLocaleDateString('en-CA');
+  const dias=[];
+  for(let d=1;d<=diasEnMes;d++){
+    const fecha=anio+'-'+String(mesNum).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    if(fecha>hoyStr)continue; // sin días futuros
+    if(fecha<FECHA_INICIO_SISTEMA_RANK)continue; // el sistema arrancó el 3 de agosto
+    const dow=new Date(fecha+'T12:00:00').getDay();
+    if(dow===0||dow===6)continue;
+    const fer=feriados.find(f=>f&&f.fecha===fecha);
+    if(fer)continue;
+    if(semanasActivas[_rkLunesDeSemana(fecha)]===false)continue;
+    dias.push(fecha);
+  }
+  return dias;
+}
+
+let _rankingCalculado=[]; // se llena al calcular, se usa luego para premiar
+
+async function calcularRanking(){
+  const mesInput=document.getElementById('rank-mes');
+  if(!mesInput.value){
+    const hoy=new Date();
+    mesInput.value=hoy.getFullYear()+'-'+String(hoy.getMonth()+1).padStart(2,'0');
+  }
+  const [anio,mesNum]=mesInput.value.split('-').map(Number);
+  const status=document.getElementById('rank-status');
+  const body=document.getElementById('rank-body');
+  const btnPremiar=document.getElementById('rank-premiar-btn');
+  status.textContent='Calculando...'; body.innerHTML=''; btnPremiar.style.display='none';
+
+  const diasHabiles=await _rkDiasHabiles(anio,mesNum);
+  if(!diasHabiles.length){ status.textContent='Sin días hábiles calculables en ese mes (revisa que no sean todos futuros).'; return; }
+
+  const snapStu=await db.ref('corposepi/students').once('value');
+  const rawStu=snapStu.val();
+  const students=(Array.isArray(rawStu)?rawStu:Object.values(rawStu||{})).filter(s=>s&&s.status==='active');
+
+  // Pre-cargar la asistencia de cada día hábil una sola vez (evita N×M lecturas repetidas)
+  const asistenciaPorDia={};
+  for(const fecha of diasHabiles){
+    const snap=await db.ref('asistencia/'+fecha).once('value');
+    const porId={};
+    snap.forEach(c=>{const v=c.val();if(v&&v.tipo==='student')porId[v.id]=v;});
+    asistenciaPorDia[fecha]=porId;
+  }
+
+  const resultado=students.map(s=>{
+    let minutosPerdidos=0,aTiempo=0,tarde=0,ausente=0;
+    for(const fecha of diasHabiles){
+      const reg=asistenciaPorDia[fecha][s.id]||null;
+      minutosPerdidos+=_rkMinutosPerdidos(reg);
+      if(!reg||reg.estado==='A')ausente++;
+      else if(reg.estado==='P')aTiempo++;
+      else tarde++;
+    }
+    const disponibles=diasHabiles.length*MINUTOS_DIA_EFECTIVO_RANK;
+    const pct=disponibles>0?Math.round(((disponibles-minutosPerdidos)/disponibles)*100):100;
+    return {id:s.id,nombre:(s.nombres||'')+' '+(s.apellidos||''),minutosPerdidos,pct,aTiempo,tarde,ausente};
+  });
+
+  // Necesitamos el índice real en el array de Firebase para poder acreditar CPI luego
+  const idxMap={};
+  (Array.isArray(rawStu)?rawStu:Object.entries(rawStu||{}).map(([k,v])=>({...v,_k:k}))).forEach((s,i)=>{
+    if(s&&s.id) idxMap[s.id]=Array.isArray(rawStu)?i:parseInt(s._k);
+  });
+  resultado.forEach(r=>r.idx=idxMap[r.id]);
+
+  resultado.sort((a,b)=>a.minutosPerdidos-b.minutosPerdidos); // menos tiempo perdido = mejor puesto
+
+  _rankingCalculado=resultado;
+
+  body.innerHTML=resultado.map((r,i)=>{
+    const top7=i<7;
+    const horas=(r.minutosPerdidos/60).toFixed(1);
+    return `<tr style="${top7?'background:rgba(251,191,36,.12);':''}">
+      <td>${top7?'🏆 ':''}${i+1}</td>
+      <td>${r.nombre}</td>
+      <td>${r.pct}%</td>
+      <td>${horas}h</td>
+      <td>${r.aTiempo}</td>
+      <td>${r.tarde}</td>
+      <td>${r.ausente}</td>
+    </tr>`;
+  }).join('');
+
+  status.textContent=`${resultado.length} estudiantes · ${diasHabiles.length} días hábiles calculados (desde ${FECHA_INICIO_SISTEMA_RANK})`;
+  if(resultado.length>=1) btnPremiar.style.display='inline-block';
+}
+
+async function premiarTop7(){
+  if(!_rankingCalculado.length){ showToast('⚠️ Calcula el ranking primero'); return; }
+  const top7=_rankingCalculado.slice(0,7).filter(r=>r.idx!=null);
+  if(!top7.length){ showToast('⚠️ No hay estudiantes para premiar'); return; }
+  const nombres=top7.map(r=>r.nombre).join(', ');
+  if(!confirm(`Se acreditarán 10 CPI (10.000 COP) a cada uno de estos ${top7.length} estudiantes:\n\n${nombres}\n\n¿Confirmar?`)) return;
+
+  const mesInput=document.getElementById('rank-mes').value;
+  const fechaPremio=new Date().toLocaleDateString('en-CA');
+  let hechos=0;
+  for(const r of top7){
+    try{
+      const snapCpi=await db.ref('corposepi/students/'+r.idx+'/cpi').once('value');
+      const cpiActual=parseFloat(snapCpi.val()||0);
+      const cpiNuevo=(cpiActual+10).toFixed(2);
+      await db.ref('corposepi/students/'+r.idx+'/cpi').set(cpiNuevo);
+      await db.ref('premios_cpi/'+mesInput+'/'+r.id).set({
+        id:r.id, nombre:r.nombre, cantidad:10, motivo:'Top 7 asistencia mensual',
+        cpiAntes:cpiActual, cpiDespues:parseFloat(cpiNuevo),
+        fecha:fechaPremio, timestamp:new Date().toISOString(),
+      });
+      // Notificar también en Plataforma Aprende
+      await db.ref('notificaciones/'+r.id).push({
+        tipo:'premio', titulo:'🏆 ¡Premio por asistencia!',
+        mensaje:`¡Felicitaciones! ${r.nombre} quedó entre los 7 estudiantes con mejor asistencia del mes y recibió 10 CPI (10.000 COP) de la corporación.`,
+        fecha:fechaPremio, hora:new Date().toLocaleTimeString('es-CO'),
+        timestamp:new Date().toISOString(), leido:false,
+      });
+      hechos++;
+    }catch(e){ console.error('Error premiando a '+r.nombre, e); }
+  }
+  showToast(`🏆 ${hechos} estudiante(s) premiados con 10 CPI cada uno`);
 }
 
 // ══ GENERAR QR ══
