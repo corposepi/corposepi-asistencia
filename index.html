@@ -361,7 +361,7 @@ td{padding:.45rem .6rem;border-bottom:1px solid var(--dark3);vertical-align:midd
       </div>
       <div class="rep-table">
         <table>
-          <thead><tr><th>#</th><th>Estudiante</th><th>Asistencia</th><th>Tiempo perdido</th><th>A tiempo</th><th>Tardanza</th><th>Ausente</th></tr></thead>
+          <thead><tr><th>#</th><th>Estudiante</th><th>Asistencia</th><th>Tiempo perdido (días y min)</th><th>Días a tiempo</th><th>Días tardanza</th><th>Días ausente</th></tr></thead>
           <tbody id="rank-body"></tbody>
         </table>
       </div>
@@ -1327,6 +1327,17 @@ function _rkParseHora(horaStr){
   if(!esPM&&h===12)h=0;
   return h*60+m;
 }
+// Convierte minutos totales perdidos a formato legible: "1 día y 100 min" (300 min = 1 día)
+function _rkFormatearTiempo(minutos){
+  minutos=Math.round(minutos);
+  if(minutos<=0)return'0 min';
+  const dias=Math.floor(minutos/MINUTOS_DIA_EFECTIVO_RANK);
+  const resto=minutos%MINUTOS_DIA_EFECTIVO_RANK;
+  const partes=[];
+  if(dias>0)partes.push(dias+(dias===1?' día':' días'));
+  if(resto>0)partes.push(resto+' min');
+  return partes.join(' y ')+' ('+minutos+' min totales)';
+}
 function _rkMinutosPerdidos(reg){
   if(!reg)return MINUTOS_DIA_EFECTIVO_RANK;
   if(reg.estado==='P')return 0;
@@ -1423,12 +1434,11 @@ async function calcularRanking(){
 
   body.innerHTML=resultado.map((r,i)=>{
     const top7=i<7;
-    const horas=(r.minutosPerdidos/60).toFixed(1);
     return `<tr style="${top7?'background:rgba(251,191,36,.12);':''}">
       <td>${top7?'🏆 ':''}${i+1}</td>
       <td>${r.nombre}</td>
       <td>${r.pct}%</td>
-      <td>${horas}h</td>
+      <td>${_rkFormatearTiempo(r.minutosPerdidos)}</td>
       <td>${r.aTiempo}</td>
       <td>${r.tarde}</td>
       <td>${r.ausente}</td>
