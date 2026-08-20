@@ -701,6 +701,19 @@ async function registrarIngreso(id, tipo, nombre, cel, exigirLugar){
 
     if(db) await db.ref(`asistencia/${hoy}/${safeId}`).set(reg);
 
+    // Notificación en Plataforma Aprende (paralela al WhatsApp) — solo estudiantes
+    if(tipo==='student' && db){
+      try{
+        const mensaje = pena.penalidad>0
+          ? `${nombre} registró su ingreso a las ${hora}. ${pena.etiqueta} — se descontaron ${pena.penalidad} FNX.`
+          : `${nombre} registró su ingreso a las ${hora}. ${pena.etiqueta}.`;
+        await db.ref('notificaciones/'+id).push({
+          tipo:'asistencia', titulo:'✅ Ingreso registrado', mensaje,
+          fecha:hoy, hora, timestamp:ahora.toISOString(), leido:false
+        });
+      }catch(e){}
+    }
+
     // Notificar WA automático solo para estudiantes
     if(tipo==='student' && cel && cel.length>=10){
       const celNum = cel.replace(/\D/g,'');
@@ -1464,6 +1477,17 @@ function compartirQR(){
         lugar: decodeURIComponent(lugar||'')
       };
       await dbPub.ref('asistencia/'+hoy+'/'+safeId).set(reg);
+
+      // Notificación en Plataforma Aprende (paralela al WhatsApp)
+      try{
+        const mensaje = pena.penalidad>0
+          ? `${est.nombres} ${est.apellidos} registró su ingreso a las ${hora}. ${pena.etiqueta} — se descontaron ${pena.penalidad} FNX.`
+          : `${est.nombres} ${est.apellidos} registró su ingreso a las ${hora}. ${pena.etiqueta}.`;
+        await dbPub.ref('notificaciones/'+id).push({
+          tipo:'asistencia', titulo:'✅ Ingreso registrado', mensaje,
+          fecha:hoy, hora, timestamp:ahora.toISOString(), leido:false
+        });
+      }catch(e){}
 
       // Mostrar resultado
       document.getElementById('pub-result').style.display='block';

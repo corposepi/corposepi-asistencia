@@ -272,6 +272,24 @@ function _mostrarAvisoBloqueo(titulo, motivo){
   }
 })();
 
+// ══ NOTIFICACIÓN EN PLATAFORMA APRENDE (paralelo al WhatsApp manual del estudiante) ══
+async function crearNotificacionPadre(estudianteId, nombreCompleto, hora, pena){
+  try{
+    const mensaje = pena.p>0
+      ? `${nombreCompleto} registró su ingreso a las ${hora}. ${pena.lbl} — se descontaron ${pena.p} FNX.`
+      : `${nombreCompleto} registró su ingreso a las ${hora}. ${pena.lbl}.`;
+    const ref = db.ref('notificaciones/'+estudianteId).push();
+    await ref.set({
+      tipo:'asistencia',
+      titulo:'✅ Ingreso registrado',
+      mensaje,
+      fecha:hoy, hora,
+      timestamp:new Date().toISOString(),
+      leido:false
+    });
+  }catch(e){ /* si falla, no bloquea el registro de asistencia — solo no llega el aviso en Aprende */ }
+}
+
 // ══ REGLAS FNX PUNTUALIDAD ══
 function calcPena(d){
   const m = d.getHours()*60+d.getMinutes();
@@ -358,6 +376,7 @@ async function registrar(){
         lugar
       };
       await db.ref('asistencia/'+hoy+'/'+safeId).set(reg);
+      crearNotificacionPadre(id, est.nombres+' '+est.apellidos, hora, pena);
       mostrarExito(est, hora, pena, fnxNuevo);
 
       if(est.cel && est.cel.replace(/\D/g,'').length>=10){
