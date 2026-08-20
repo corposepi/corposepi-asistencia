@@ -1311,6 +1311,7 @@ async function cargarReporteDocente(){
 const MINUTOS_DIA_EFECTIVO_RANK=300; // 5 horas efectivas por día
 const HORA_INICIO_CLASE_RANK=8*60; // 8:00am
 const FECHA_INICIO_SISTEMA_RANK='2026-08-03'; // primer día con el sistema ya funcionando bien
+const MAX_AUSENCIAS_PARA_PREMIO=1; // dentro del top 7, solo recibe premio quien tenga como máximo 1 día ausente
 
 function _rkParseHora(horaStr){
   if(!horaStr)return null;
@@ -1434,9 +1435,11 @@ async function calcularRanking(){
 
   body.innerHTML=resultado.map((r,i)=>{
     const top7=i<7;
-    return `<tr style="${top7?'background:rgba(251,191,36,.12);':''}">
-      <td>${top7?'🏆 ':''}${i+1}</td>
-      <td>${r.nombre}</td>
+    const cumpleRegla=r.ausente<=MAX_AUSENCIAS_PARA_PREMIO;
+    const marca=top7?(cumpleRegla?'🏆 ':'🚫 '):'';
+    return `<tr style="${top7?(cumpleRegla?'background:rgba(251,191,36,.12);':'background:rgba(248,113,113,.08);'):''}">
+      <td>${marca}${i+1}</td>
+      <td>${r.nombre}${top7&&!cumpleRegla?' <span style="font-size:.6rem;color:#f87171;">(sin premio: '+r.ausente+' ausencias)</span>':''}</td>
       <td>${r.pct}%</td>
       <td>${_rkFormatearTiempo(r.minutosPerdidos)}</td>
       <td>${r.aTiempo}</td>
@@ -1451,10 +1454,26 @@ async function calcularRanking(){
 
 async function premiarTop7(){
   if(!_rankingCalculado.length){ showToast('⚠️ Calcula el ranking primero'); return; }
-  const top7=_rankingCalculado.slice(0,7).filter(r=>r.idx!=null);
-  if(!top7.length){ showToast('⚠️ No hay estudiantes para premiar'); return; }
-  const nombres=top7.map(r=>r.nombre).join(', ');
-  if(!confirm(`Se acreditarán 10 CPI (10.000 COP) a cada uno de estos ${top7.length} estudiantes:\n\n${nombres}\n\n¿Confirmar?`)) return;
+  const top7Posiciones=_rankingCalculado.slice(0,7).filter(r=>r.idx!=null);
+  // Regla: dentro del top 7, solo recibe premio quien tenga como máximo 1 día ausente.
+  // No se reemplaza por el siguiente en la lista — si no cumple, simplemente se queda sin premio.
+  const elegibles=top7Posiciones.filter(r=>r.ausente<=MAX_AUSENCIAS_PARA_PREMIO);
+  const noElegibles=top7Posiciones.filter(r=>r.ausente>MAX_AUSENCIAS_PARA_PREMIO);
+
+  if(!elegibles.length){
+    const detalle=noElegibles.map(r=>`${r.nombre} (${r.ausente} ausencias)`).join('\n');
+    alert(`Ninguno de los 7 primeros cumple la regla de máximo ${MAX_AUSENCIAS_PARA_PREMIO} día(s) ausente, así que no se premia a nadie este mes.\n\n${detalle}`);
+    return;
+  }
+
+  let mensajeConfirm=`Se acreditarán 10 CPI (10.000 COP) a cada uno de estos ${elegibles.length} estudiantes:\n\n${elegibles.map(r=>r.nombre).join(', ')}`;
+  if(noElegibles.length){
+    mensajeConfirm+=`\n\n⚠️ Quedan SIN premio (estaban en el top 7 pero superaron ${MAX_AUSENCIAS_PARA_PREMIO} día(s) ausente):\n${noElegibles.map(r=>r.nombre+' — '+r.ausente+' ausencias').join('\n')}`;
+  }
+  mensajeConfirm+=`\n\n¿Confirmar?`;
+  if(!confirm(mensajeConfirm)) return;
+
+  const top7=elegibles;
 
   const mesInput=document.getElementById('rank-mes').value;
   const fechaPremio=new Date().toLocaleDateString('en-CA');
